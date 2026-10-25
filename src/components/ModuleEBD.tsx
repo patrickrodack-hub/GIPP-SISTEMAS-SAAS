@@ -135,10 +135,15 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
     const [chamadaLicaoNum, setChamadaLicaoNum] = useState('');
     const [studentAttendanceMap, setStudentAttendanceMap] = useState<Record<string, { presente: boolean; trouxeBiblia: boolean; trouxeRevista: boolean; oferta: boolean }>>({});
 
-    // --- ESTADOS DO FILTRO TRIMESTRAL DE LIÇÕES ---
+    // --- ESTADOS DO FILTRO TRIMESTRAL E MODOS DE VISUALIZAÇÃO DE LIÇÕES ---
     const [licaoPeriod, setLicaoPeriod] = useState('todos');
     const [licaoStartDate, setLicaoStartDate] = useState('');
     const [licaoEndDate, setLicaoEndDate] = useState('');
+    const [licaoViewMode, setLicaoViewMode] = useState<'revistas' | 'cards' | 'turmas' | 'tabela'>('revistas');
+    const [licaoSearchQuery, setLicaoSearchQuery] = useState('');
+    const [licaoTurmaFilter, setLicaoTurmaFilter] = useState('todas');
+    const [licaoRevistaFilter, setLicaoRevistaFilter] = useState('todas');
+    const [expandedRevistas, setExpandedRevistas] = useState<Record<string, boolean>>({});
 
     // --- ESTADOS DO BUSCADOR E GERADOR DE REVISTAS CPAD ---
     const [cpadSearchModalOpen, setCpadSearchModalOpen] = useState(false);
@@ -1031,7 +1036,17 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
         return (db.ebd?.licoes || []).filter((l: any) => turmasFiltradas.some((t: any) => t.id === l.turma_id));
     }, [db.ebd?.licoes, turmasFiltradas]);
 
-    // --- FILTRAGEM EFETIVA DE LIÇÕES POR TIPO DE DATA/PERÍODO ---
+    // --- FILTRAGEM EFETIVA DE LIÇÕES POR TIPO DE DATA/PERÍODO, TURMA, REVISTA E BUSCA ---
+    const revistasUnicas = useMemo(() => {
+        const setRev = new Set<string>();
+        licoesFiltradasTotal.forEach((l: any) => {
+            if (l.revista && String(l.revista).trim()) {
+                setRev.add(String(l.revista).trim());
+            }
+        });
+        return Array.from(setRev).sort((a, b) => a.localeCompare(b));
+    }, [licoesFiltradasTotal]);
+
     const filteredLicoesPeriodoFull = useMemo(() => {
         let list = [...licoesFiltradasTotal];
         
@@ -1053,9 +1068,83 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
                 return true;
             });
         }
+
+        if (licaoTurmaFilter !== 'todas') {
+            list = list.filter(item => item.turma_id === licaoTurmaFilter);
+        }
+
+        if (licaoRevistaFilter !== 'todas') {
+            list = list.filter(item => String(item.revista || '').trim() === licaoRevistaFilter);
+        }
+
+        if (licaoSearchQuery.trim()) {
+            const q = licaoSearchQuery.trim().toLowerCase();
+            list = list.filter(item => {
+                const turmaNome = turmasFiltradas.find((t: any) => t.id === item.turma_id)?.nome || '';
+                return (
+                    String(item.revista || '').toLowerCase().includes(q) ||
+                    String(item.licao_numero || '').toLowerCase().includes(q) ||
+                    String(item.tema || '').toLowerCase().includes(q) ||
+                    String(turmaNome).toLowerCase().includes(q) ||
+                    String(item.data || '').toLowerCase().includes(q)
+                );
+            });
+        }
         
         return list;
-    }, [licoesFiltradasTotal, licaoStartDate, licaoEndDate]);
+    }, [licoesFiltradasTotal, licaoStartDate, licaoEndDate, licaoTurmaFilter, licaoRevistaFilter, licaoSearchQuery, turmasFiltradas]);
+
+    // --- AGRUPAMENTO DE LIÇÕES POR REVISTA PARA O MODO ESTANTE ---
+    const licoesAgrupadasPorRevista = useMemo(() => {
+        const groups: Record<string, {
+            revista: string;
+            capa: string | null;
+            licoes: any[];
+            turmasIds: Set<string>;
+            totalPresentes: number;
+            offlineCount: number;
+        }> = {};
+
+        filteredLicoesPeriodoFull.forEach((l: any) => {
+            const revName = String(l.revista || 'Lições Avulsas / Sem Revista').trim();
+            if (!groups[revName]) {
+                const fallbackCapa = (db.ebd?.licoes || []).find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null')?.capa || null;
+                groups[revName] = {
+                    revista: revName,
+                    capa: (l.capa && l.capa !== 'null') ? l.capa : fallbackCapa,
+                    licoes: [],
+                    turmasIds: new Set<string>(),
+                    totalPresentes: 0,
+                    offlineCount: 0
+                };
+            }
+            if (!groups[revName].capa && l.capa && l.capa !== 'null') {
+                groups[revName].capa = l.capa;
+            }
+            groups[revName].licoes.push(l);
+            if (l.turma_id) groups[revName].turmasIds.add(l.turma_id);
+            groups[revName].totalPresentes += (Number(l.qtd_presentes) || 0);
+            if (downloadedLessons.includes(l.id || l.licao_numero)) {
+                groups[revName].offlineCount += 1;
+            }
+        });
+
+        return Object.values(groups).map(g => {
+            const sortedLicoes = [...g.licoes].sort((a, b) => {
+                const numA = parseInt(String(a.licao_numero || '').replace(/\D/g, ''), 10);
+                const numB = parseInt(String(b.licao_numero || '').replace(/\D/g, ''), 10);
+                if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+                return String(a.data || '').localeCompare(String(b.data || ''));
+            });
+            return {
+                ...g,
+                licoes: sortedLicoes,
+                turmasNomes: Array.from(g.turmasIds)
+                    .map(id => turmasFiltradas.find((t: any) => t.id === id)?.nome)
+                    .filter(Boolean) as string[]
+            };
+        });
+    }, [filteredLicoesPeriodoFull, db.ebd?.licoes, downloadedLessons, turmasFiltradas]);
 
     // --- GESTÃO DE FILTRO DE DATA/PERÍODO ---
     const handleLicaoPeriodChange = (val: string) => {
@@ -1490,12 +1579,17 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
             )}
 
             {!isProfessorOnly && (
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl flex overflow-x-auto custom-scrollbar gap-2 border border-slate-200/80 dark:border-slate-800 w-full md:w-auto">
-                        {menuItems.map(item => <TabButton key={item.id} item={item} />)}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 w-full max-w-full overflow-hidden">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 w-full max-w-full overflow-hidden shadow-xs">
+                        <div
+                            className="flex items-center gap-2 overflow-x-auto pb-1.5 w-full"
+                            style={{ scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
+                        >
+                            {menuItems.map(item => <TabButton key={item.id} item={item} />)}
+                        </div>
                     </div>
                     {tab === 1 && (
-                        <div className="flex items-center gap-3 bg-white/40 p-2 rounded-2xl border border-white/50">
+                        <div className="flex items-center gap-3 bg-white/40 p-2 rounded-2xl border border-white/50 shrink-0">
                             <Calendar size={18} className="text-indigo-600 ml-2"/>
                             <input type="month" value={filterDate} onChange={e => setFilterDate(((e.target.value || "").toUpperCase() || "").toUpperCase())} className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 uppercase"/>
                         </div>
@@ -1854,15 +1948,161 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                 )}
                 {tab === 4 && (
                     <div className="h-full flex flex-col space-y-4 overflow-y-auto custom-scrollbar p-2">
-                        {/* Painel de Filtros EBD Quarterly/Trimestrais */}
-                        <div className="glass-card p-6 rounded-[2.2rem] border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-end justify-between bg-white/70 shrink-0">
-                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full text-left">
+                        {/* Barra Superior de Indicadores e Modos de Visualização Integrada */}
+                        <div className="glass-card p-5 rounded-[2rem] border border-slate-200/80 shadow-sm bg-white/85 shrink-0 space-y-4">
+                            {/* Linha 1: Cabeçalho, Resumo Rápido e Alternador de Modos de Visualização */}
+                            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="p-3 rounded-2xl bg-gradient-to-br from-rose-500 to-indigo-600 text-white shadow-md shadow-rose-500/20">
+                                        <BookOpen size={22} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">Central Integrada de Lições EBD</h3>
+                                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-600 border border-indigo-200">
+                                                {filteredLicoesPeriodoFull.length} {filteredLicoesPeriodoFull.length === 1 ? 'Lição' : 'Lições'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 font-medium">
+                                            Navegue por estante de revistas trimestrais, catálogo em cards, classes ou tabela completa.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Seletor de Módulos de Visualização */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 flex items-center gap-1 overflow-x-auto max-w-full">
+                                        <button
+                                            type="button"
+                                            onClick={() => setLicaoViewMode('revistas')}
+                                            className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                                                licaoViewMode === 'revistas'
+                                                    ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/60'
+                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                                            }`}
+                                            title="Agrupar lições por Revista / Trimestre"
+                                        >
+                                            <Layers size={14} /> Por Revista ({licoesAgrupadasPorRevista.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setLicaoViewMode('cards')}
+                                            className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                                                licaoViewMode === 'cards'
+                                                    ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/60'
+                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                                            }`}
+                                            title="Visualizar lições em Grade de Cards"
+                                        >
+                                            <LayoutTemplate size={14} /> Grade de Cards
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setLicaoViewMode('turmas')}
+                                            className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                                                licaoViewMode === 'turmas'
+                                                    ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/60'
+                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                                            }`}
+                                            title="Agrupar lições por Turma / Classe"
+                                        >
+                                            <GraduationCap size={14} /> Por Turma ({turmasFiltradas.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setLicaoViewMode('tabela')}
+                                            className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                                                licaoViewMode === 'tabela'
+                                                    ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/60'
+                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                                            }`}
+                                            title="Visualizar em Tabela Detalhada"
+                                        >
+                                            <List size={14} /> Tabela
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => openModal('ebd_licao')}
+                                        className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
+                                    >
+                                        <Plus size={14} /> Nova Lição
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setCpadSearchModalOpen(true)}
+                                        className="px-4 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-500/20 flex items-center gap-1.5 cursor-pointer shrink-0"
+                                    >
+                                        <BookOpen size={14} className="animate-pulse" /> Acervo & Gerador CPAD
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Linha 2: Filtros Integrados (Busca, Turma, Revista, Trimestre e Datas) */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end text-left">
+                                {/* Busca Rápida */}
+                                <div className="sm:col-span-2 lg:col-span-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">Buscar Lição / Tema / Revista</label>
+                                    <div className="relative">
+                                        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={licaoSearchQuery}
+                                            onChange={e => setLicaoSearchQuery(e.target.value)}
+                                            placeholder="Ex: Lição 1, Teontologia, Adultos..."
+                                            className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        {licaoSearchQuery && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setLicaoSearchQuery('')}
+                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                            >
+                                                <X size={13} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Filtro por Turma */}
                                 <div>
-                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Revista / Período (Trimestre)</label>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">Filtrar por Turma</label>
+                                    <select
+                                        value={licaoTurmaFilter}
+                                        onChange={e => setLicaoTurmaFilter(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <option value="todas">🏛️ Todas as Turmas</option>
+                                        {turmasFiltradas.map((t: any) => (
+                                            <option key={t.id} value={t.id}>{t.nome}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Filtro por Revista */}
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">Filtrar por Revista</label>
+                                    <select
+                                        value={licaoRevistaFilter}
+                                        onChange={e => setLicaoRevistaFilter(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <option value="todas">📚 Todas as Revistas</option>
+                                        {revistasUnicas.map((rev: string) => (
+                                            <option key={rev} value={rev}>{rev}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Filtro Trimestral */}
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">Período / Trimestre</label>
                                     <select
                                         value={licaoPeriod}
                                         onChange={e => handleLicaoPeriodChange(e.target.value)}
-                                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
                                     >
                                         <option value="todos">📅 Todo o Período</option>
                                         <option value="1_trimestre">🌸 1º Trimestre (Jan-Mar)</option>
@@ -1873,47 +2113,52 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                         <option value="30_dias">🔄 Últimos 30 dias</option>
                                     </select>
                                 </div>
-                                <div className={`text-left ${licaoPeriod === 'personalizado' ? "opacity-100" : "opacity-75"}`}>
-                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Data Inicial</label>
-                                    <input
-                                        type="date"
-                                        value={licaoStartDate}
-                                        onChange={e => setLicaoStartDate(e.target.value)}
-                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
-                                    />
-                                </div>
-                                <div className={`text-left ${licaoPeriod === 'personalizado' ? "opacity-100" : "opacity-75"}`}>
-                                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block mb-1.5">Data Final</label>
-                                    <input
-                                        type="date"
-                                        value={licaoEndDate}
-                                        onChange={e => setLicaoEndDate(e.target.value)}
-                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
-                                    />
+
+                                {/* Datas personalizadas ou botão Limpar */}
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 grid grid-cols-2 gap-1.5">
+                                        <div>
+                                            <label className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Início</label>
+                                            <input
+                                                type="date"
+                                                value={licaoStartDate}
+                                                onChange={e => setLicaoStartDate(e.target.value)}
+                                                className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 focus:outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Fim</label>
+                                            <input
+                                                type="date"
+                                                value={licaoEndDate}
+                                                onChange={e => setLicaoEndDate(e.target.value)}
+                                                className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    {(licaoPeriod !== 'todos' || licaoStartDate || licaoEndDate || licaoSearchQuery || licaoTurmaFilter !== 'todas' || licaoRevistaFilter !== 'todas') && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                handleLicaoPeriodChange('todos');
+                                                setLicaoSearchQuery('');
+                                                setLicaoTurmaFilter('todas');
+                                                setLicaoRevistaFilter('todas');
+                                            }}
+                                            className="p-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl text-rose-600 transition self-end cursor-pointer"
+                                            title="Limpar todos os filtros"
+                                        >
+                                            <RotateCcw size={15} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                            
-                            {(licaoPeriod !== 'todos' || licaoStartDate || licaoEndDate) && (
-                                <button
-                                    onClick={() => handleLicaoPeriodChange('todos')}
-                                    className="px-4 py-2.5 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl text-[10px] font-black uppercase text-slate-600 hover:text-rose-600 tracking-wider transition duration-200 flex items-center gap-1.5 self-center md:self-end"
-                                >
-                                    <RotateCcw size={12} /> Limpar Filtros
-                                </button>
-                            )}
-
-                            <button
-                                onClick={() => setCpadSearchModalOpen(true)}
-                                className="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-500/20 flex items-center gap-2 self-center md:self-end cursor-pointer shrink-0"
-                            >
-                                <BookOpen size={14} className="animate-pulse" /> 🔎 Acervo & Gerador CPAD
-                            </button>
                         </div>
 
-                        {/* Tabela do Controle de Lições Aplicadas */}
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[300px]">
+                        {/* Área de Conteúdo Dinâmica conforme o Modo de Visualização */}
+                        <div className="flex-1 min-h-[380px]">
                             {loadingList ? (
-                                <div className="p-6 space-y-4 animate-pulse">
+                                <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 animate-pulse">
                                     <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                                         <div className="h-5 bg-slate-200 rounded w-48"></div>
                                         <div className="h-4 bg-slate-200 rounded w-16"></div>
@@ -1927,83 +2172,490 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                         </div>
                                     ))}
                                 </div>
-                            ) : (
-                                <GenericTable 
-                                    title="Registro de Lições" 
-                                    type="ebd_licao" 
-                                    data={filteredLicoesPeriodoFull} 
-                                    columns={[
-                                        {header:'Data', key:'data', render: d=>formatDateLocal(d.data)}, 
-                                        {header:'Turma', key:'turma_id', render: l => turmasFiltradas.find(t=>t.id===l.turma_id)?.nome}, 
-                                        {header:'Revista/Tema', key:'revista', render: l => {
-                                            const manualOrMagazineCapa = l.capa && l.capa !== 'null' ? l.capa : ((db.ebd?.licoes || []).find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null')?.capa || null);
-                                            return (
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-14 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-slate-400">
+                            ) : filteredLicoesPeriodoFull.length === 0 ? (
+                                <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center flex flex-col items-center justify-center space-y-4 shadow-xs">
+                                    <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                                        <BookOpen size={32} />
+                                    </div>
+                                    <div className="max-w-md space-y-1">
+                                        <h4 className="text-lg font-black text-slate-800">Nenhuma lição encontrada para os filtros atuais</h4>
+                                        <p className="text-xs text-slate-500">
+                                            Importe um trimestre completo de 13 lições pelo Acervo & Gerador CPAD ou cadastre uma nova lição manualmente.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCpadSearchModalOpen(true)}
+                                            className="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-2 cursor-pointer"
+                                        >
+                                            <BookOpen size={15} /> Abrir Acervo & Gerador CPAD
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => openModal('ebd_licao')}
+                                            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+                                        >
+                                            <Plus size={15} /> Cadastrar Lição Manual
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : licaoViewMode === 'revistas' ? (
+                                /* MODO 1: ESTANTE AGRUPADA POR REVISTA / TRIMESTRE */
+                                <div className="space-y-5">
+                                    {licoesAgrupadasPorRevista.map((grupo, idx) => {
+                                        const isExpanded = expandedRevistas[grupo.revista] !== false; // aberto por padrão
+                                        const progressPct = Math.min(100, Math.round((grupo.licoes.length / 13) * 100));
+                                        return (
+                                            <div key={grupo.revista + idx} className="bg-white rounded-[2rem] border border-slate-200/90 shadow-xs overflow-hidden transition-all">
+                                                {/* Cabeçalho da Revista */}
+                                                <div className="p-5 bg-gradient-to-r from-slate-50 via-white to-indigo-50/40 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-16 h-22 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden shrink-0 flex items-center justify-center text-slate-400 shadow-xs">
+                                                            {grupo.capa ? (
+                                                                <img src={grupo.capa} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt={grupo.revista} />
+                                                            ) : (
+                                                                <BookOpen size={24} className="text-indigo-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-1.5 text-left">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700">
+                                                                    Revista / Sumário
+                                                                </span>
+                                                                {grupo.turmasNomes.map(tn => (
+                                                                    <span key={tn} className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                                                        🏛️ {tn}
+                                                                    </span>
+                                                                ))}
+                                                                {grupo.offlineCount > 0 && (
+                                                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                                                        <Check size={10} /> {grupo.offlineCount} Offline
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <h4 className="text-base md:text-lg font-black text-slate-800 leading-snug">{grupo.revista}</h4>
+                                                            <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold text-slate-500">
+                                                                <span>📖 <strong className="text-slate-800">{grupo.licoes.length}</strong> lições registradas</span>
+                                                                <span>👥 <strong className="text-slate-800">{grupo.totalPresentes}</strong> presenças acumuladas</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                                                        <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full" style={{ width: `${progressPct}%` }} />
+                                                                    </div>
+                                                                    <span className="text-[10px] font-black text-indigo-600">{grupo.licoes.length}/13</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-2 self-end lg:self-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openModal('ebd_licao', { revista: grupo.revista, capa: grupo.capa, turma_id: Array.from(grupo.turmasIds)[0] || '' })}
+                                                            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+                                                        >
+                                                            <Plus size={13} /> Adicionar Lição nesta Revista
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setExpandedRevistas(prev => ({ ...prev, [grupo.revista]: !isExpanded }))}
+                                                            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+                                                        >
+                                                            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                                            {isExpanded ? 'Recolher Lições' : `Ver ${grupo.licoes.length} Lições`}
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Grade de Lições da Revista */}
+                                                {isExpanded && (
+                                                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 bg-slate-50/40">
+                                                        {grupo.licoes.map((l: any) => {
+                                                            const turmaNome = turmasFiltradas.find((t: any) => t.id === l.turma_id)?.nome || 'Sem Turma';
+                                                            const isOffline = downloadedLessons.includes(l.id || l.licao_numero);
+                                                            const isDownloading = downloadingIds.includes(l.id || l.licao_numero);
+                                                            return (
+                                                                <div
+                                                                    key={l.id || `${l.revista}-${l.licao_numero}-${l.data}`}
+                                                                    className="bg-white rounded-2xl border border-slate-200/90 p-4 hover:border-indigo-300 hover:shadow-md transition-all flex flex-col justify-between gap-3 group"
+                                                                >
+                                                                    <div className="space-y-2 text-left">
+                                                                        <div className="flex items-center justify-between gap-2">
+                                                                            <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                                                                                {l.licao_numero || 'Lição'}
+                                                                            </span>
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                {isLicaoNova(l) && (
+                                                                                    <span className="px-1.5 py-0.5 text-[8px] font-black bg-amber-500 text-white rounded flex items-center gap-0.5">
+                                                                                        <Sparkles size={8} /> NOVO
+                                                                                    </span>
+                                                                                )}
+                                                                                {isOffline && (
+                                                                                    <span className="px-1.5 py-0.5 text-[8px] font-black bg-emerald-500 text-white rounded flex items-center gap-0.5">
+                                                                                        <Check size={8} /> OFFLINE
+                                                                                    </span>
+                                                                                )}
+                                                                                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                                                                    <Calendar size={11} /> {formatDateLocal(l.data)}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <p className="text-xs font-extrabold text-slate-800 line-clamp-2 leading-snug">
+                                                                            {l.tema || l.revista}
+                                                                        </p>
+
+                                                                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 pt-1 border-t border-slate-100">
+                                                                            <span className="truncate max-w-[160px]" title={turmaNome}>🏛️ {turmaNome}</span>
+                                                                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-black">
+                                                                                👥 {l.qtd_presentes || 0} pres.
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-100">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleGenerateLessonPlan(l)}
+                                                                            className="flex-1 py-2 px-3 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                                        >
+                                                                            <BookOpenText size={14} /> Estudar Lição
+                                                                        </button>
+
+                                                                        {isDownloading ? (
+                                                                            <button disabled className="p-2 bg-slate-100 text-slate-400 rounded-xl">
+                                                                                <Loader2 size={14} className="animate-spin" />
+                                                                            </button>
+                                                                        ) : isOffline ? (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => handleDeleteOfflineCache(l, e)}
+                                                                                className="p-2 bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-200 rounded-xl transition cursor-pointer"
+                                                                                title="Remover cache offline"
+                                                                            >
+                                                                                <Trash size={14} />
+                                                                            </button>
+                                                                        ) : (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => handleDownloadForOffline(l, e)}
+                                                                                className="p-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 rounded-xl transition cursor-pointer"
+                                                                                title="Salvar lição offline"
+                                                                            >
+                                                                                <DownloadCloud size={14} />
+                                                                            </button>
+                                                                        )}
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => openModal('ebd_licao', l)}
+                                                                            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition cursor-pointer"
+                                                                            title="Editar Lição"
+                                                                        >
+                                                                            <Edit size={14} />
+                                                                        </button>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => deleteItem('ebd_licao', l.id)}
+                                                                            className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition cursor-pointer"
+                                                                            title="Excluir Lição"
+                                                                        >
+                                                                            <Trash2 size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : licaoViewMode === 'cards' ? (
+                                /* MODO 2: GRADE DE CARDS (CATÁLOGO VISUAL) */
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+                                    {filteredLicoesPeriodoFull.map((l: any) => {
+                                        const turmaNome = turmasFiltradas.find((t: any) => t.id === l.turma_id)?.nome || 'Sem Turma';
+                                        const manualOrMagazineCapa = l.capa && l.capa !== 'null'
+                                            ? l.capa
+                                            : ((db.ebd?.licoes || []).find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null')?.capa || null);
+                                        const isOffline = downloadedLessons.includes(l.id || l.licao_numero);
+                                        const isDownloading = downloadingIds.includes(l.id || l.licao_numero);
+
+                                        return (
+                                            <div
+                                                key={l.id || `${l.revista}-${l.licao_numero}-${l.data}`}
+                                                className="bg-white rounded-[1.75rem] border border-slate-200/90 shadow-xs hover:shadow-md hover:border-indigo-300 transition-all p-4 flex flex-col justify-between gap-4"
+                                            >
+                                                <div className="flex gap-3.5 text-left">
+                                                    <div className="w-16 h-24 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden shrink-0 flex items-center justify-center text-slate-400 shadow-2xs">
                                                         {manualOrMagazineCapa ? (
                                                             <img src={manualOrMagazineCapa} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Capa" />
                                                         ) : (
-                                                            <BookOpen size={16} />
+                                                            <BookOpen size={22} className="text-indigo-400" />
                                                         )}
                                                     </div>
-                                                    <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-3">
-                                                        <span className="font-semibold text-slate-800 break-all">{l.revista}</span>
-                                                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-                                                            {isLicaoNova(l) && (
-                                                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-black bg-amber-500 text-white rounded border border-amber-600/10 shadow-3xs animate-pulse">
-                                                                    <Sparkles size={7} className="text-white fill-white" /> NOVO
-                                                                </span>
-                                                            )}
-                                                            {downloadedLessons.includes(l.id || l.licao_numero) && (
-                                                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-black bg-emerald-500 text-white rounded border border-emerald-600/10 shadow-3xs">
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center justify-between gap-1 flex-wrap">
+                                                            <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[9px] font-black uppercase">
+                                                                {l.licao_numero || 'Lição'}
+                                                            </span>
+                                                            <span className="text-[10px] font-bold text-slate-400">
+                                                                {formatDateLocal(l.data)}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="text-xs font-black text-slate-800 line-clamp-2 leading-snug" title={l.revista}>
+                                                            {l.revista}
+                                                        </h4>
+                                                        <p className="text-[10px] font-bold text-indigo-600 truncate">
+                                                            🏛️ {turmaNome}
+                                                        </p>
+                                                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[9px] font-black">
+                                                                👥 {l.qtd_presentes || 0} presentes
+                                                            </span>
+                                                            {isOffline && (
+                                                                <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-white text-[8px] font-black flex items-center gap-0.5">
                                                                     <Check size={8} /> OFFLINE
                                                                 </span>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
-                                            );
-                                        }}, 
-                                        {header:'Lição', key:'licao_numero'}, 
-                                        {header:'Presentes', key:'qtd_presentes'}
-                                    ]} 
-                                    customActions={(item) => (
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            {downloadingIds.includes(item.id || item.licao_numero) ? (
-                                                <button disabled className="p-2.5 bg-slate-150 border border-slate-200 text-slate-500 rounded-xl flex items-center gap-1 text-[10px] uppercase font-bold animate-pulse">
-                                                    <Loader2 size={16} className="animate-spin" /> ...
-                                                </button>
-                                            ) : downloadedLessons.includes(item.id || item.licao_numero) ? (
+
+                                                <div className="flex items-center gap-1.5 pt-3 border-t border-slate-100">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleGenerateLessonPlan(l)}
+                                                        className="flex-1 py-2 px-3 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 rounded-xl text-[10px] font-black uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                                    >
+                                                        <BookOpenText size={14} /> Estudar com IA
+                                                    </button>
+                                                    {isDownloading ? (
+                                                        <button disabled className="p-2 bg-slate-100 text-slate-400 rounded-xl">
+                                                            <Loader2 size={14} className="animate-spin" />
+                                                        </button>
+                                                    ) : isOffline ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => handleDeleteOfflineCache(l, e)}
+                                                            className="p-2 bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-200 rounded-xl transition cursor-pointer"
+                                                            title="Remover cache offline"
+                                                        >
+                                                            <Trash size={14} />
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => handleDownloadForOffline(l, e)}
+                                                            className="p-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 rounded-xl transition cursor-pointer"
+                                                            title="Pré-carregar Offline"
+                                                        >
+                                                            <DownloadCloud size={14} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openModal('ebd_licao', l)}
+                                                        className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition cursor-pointer"
+                                                        title="Editar Lição"
+                                                    >
+                                                        <Edit size={14} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => deleteItem('ebd_licao', l.id)}
+                                                        className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition cursor-pointer"
+                                                        title="Excluir Lição"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : licaoViewMode === 'turmas' ? (
+                                /* MODO 3: VISÃO PEDAGÓGICA POR TURMA / CLASSE */
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                    {turmasFiltradas.map((turma: any) => {
+                                        const licoesDaTurma = filteredLicoesPeriodoFull
+                                            .filter((l: any) => l.turma_id === turma.id)
+                                            .sort((a: any, b: any) => String(b.data || '').localeCompare(String(a.data || '')));
+                                        const mediaTurma = licoesDaTurma.length > 0
+                                            ? Math.round(licoesDaTurma.reduce((acc: number, curr: any) => acc + (Number(curr.qtd_presentes) || 0), 0) / licoesDaTurma.length)
+                                            : 0;
+
+                                        return (
+                                            <div key={turma.id} className="bg-white rounded-[2rem] border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+                                                <div className="p-5 bg-gradient-to-r from-indigo-50/70 via-white to-slate-50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                                                    <div className="text-left">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-indigo-600 text-white">
+                                                                Classe EBD
+                                                            </span>
+                                                            <span className="text-[11px] font-bold text-slate-500">
+                                                                Prof. {turma.professor || 'Não definido'}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="text-base font-black text-slate-800 mt-1">{turma.nome}</h4>
+                                                        <p className="text-[11px] font-bold text-slate-500">
+                                                            📖 {licoesDaTurma.length} lições • 👥 Média de {mediaTurma} presentes/aula
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openChamadaModal(turma)}
+                                                            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                                        >
+                                                            <UserCheck size={13} /> Chamada
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openModal('ebd_licao', { turma_id: turma.id })}
+                                                            className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                                                        >
+                                                            <Plus size={13} /> Nova Lição
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="p-4 flex-1 max-h-[360px] overflow-y-auto custom-scrollbar space-y-2.5">
+                                                    {licoesDaTurma.length === 0 ? (
+                                                        <div className="py-8 text-center text-xs text-slate-400 font-bold">
+                                                            Nenhuma lição registrada para esta turma no filtro atual.
+                                                        </div>
+                                                    ) : (
+                                                        licoesDaTurma.map((l: any) => (
+                                                            <div
+                                                                key={l.id || `${l.licao_numero}-${l.data}`}
+                                                                className="p-3 rounded-2xl border border-slate-200/80 hover:border-indigo-300 bg-slate-50/50 hover:bg-white transition flex items-center justify-between gap-3"
+                                                            >
+                                                                <div className="min-w-0 text-left flex-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase">
+                                                                            {l.licao_numero || 'Lição'}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-bold text-slate-400">
+                                                                            {formatDateLocal(l.data)}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-black text-emerald-600">
+                                                                            👥 {l.qtd_presentes || 0}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-xs font-bold text-slate-800 truncate mt-1" title={l.revista}>
+                                                                        {l.revista}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleGenerateLessonPlan(l)}
+                                                                        className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 transition cursor-pointer"
+                                                                        title="Estudar Lição com IA"
+                                                                    >
+                                                                        <BookOpenText size={13} /> Estudar
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => openModal('ebd_licao', l)}
+                                                                        className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition cursor-pointer"
+                                                                        title="Editar"
+                                                                    >
+                                                                        <Edit size={13} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                /* MODO 4: TABELA DETALHADA (LISTA COMPLETA) */
+                                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[300px]">
+                                    <GenericTable 
+                                        title="Registro de Lições" 
+                                        type="ebd_licao" 
+                                        data={filteredLicoesPeriodoFull} 
+                                        columns={[
+                                            {header:'Data', key:'data', render: d=>formatDateLocal(d.data)}, 
+                                            {header:'Turma', key:'turma_id', render: l => turmasFiltradas.find(t=>t.id===l.turma_id)?.nome}, 
+                                            {header:'Revista/Tema', key:'revista', render: l => {
+                                                const manualOrMagazineCapa = l.capa && l.capa !== 'null' ? l.capa : ((db.ebd?.licoes || []).find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null')?.capa || null);
+                                                return (
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-14 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-slate-400">
+                                                            {manualOrMagazineCapa ? (
+                                                                <img src={manualOrMagazineCapa} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Capa" />
+                                                            ) : (
+                                                                <BookOpen size={16} />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-3">
+                                                            <span className="font-semibold text-slate-800 break-all">{l.revista}</span>
+                                                            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                                                {isLicaoNova(l) && (
+                                                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-black bg-amber-500 text-white rounded border border-amber-600/10 shadow-3xs animate-pulse">
+                                                                        <Sparkles size={7} className="text-white fill-white" /> NOVO
+                                                                    </span>
+                                                                )}
+                                                                {downloadedLessons.includes(l.id || l.licao_numero) && (
+                                                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-black bg-emerald-500 text-white rounded border border-emerald-600/10 shadow-3xs">
+                                                                        <Check size={8} /> OFFLINE
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }}, 
+                                            {header:'Lição', key:'licao_numero'}, 
+                                            {header:'Presentes', key:'qtd_presentes'}
+                                        ]} 
+                                        customActions={(item) => (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {downloadingIds.includes(item.id || item.licao_numero) ? (
+                                                    <button disabled className="p-2.5 bg-slate-150 border border-slate-200 text-slate-500 rounded-xl flex items-center gap-1 text-[10px] uppercase font-bold animate-pulse">
+                                                        <Loader2 size={16} className="animate-spin" /> ...
+                                                    </button>
+                                                ) : downloadedLessons.includes(item.id || item.licao_numero) ? (
+                                                    <button 
+                                                        onClick={(e) => handleDeleteOfflineCache(item, e)}
+                                                        className="p-2.5 bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm flex items-center gap-1" 
+                                                        title="Excluir lição offline do aparelho"
+                                                    >
+                                                        <Trash size={16} />
+                                                        <span className="hidden lg:inline text-[10px] font-bold uppercase">Excluir</span>
+                                                    </button>
+                                                ) : (
+                                                    <button 
+                                                        onClick={(e) => handleDownloadForOffline(item, e)}
+                                                        className="p-2.5 bg-indigo-50/50 border border-indigo-150 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm flex items-center gap-1" 
+                                                        title="Pré-carregar Lição para uso sem internet"
+                                                    >
+                                                        <DownloadCloud size={16} />
+                                                        <span className="hidden lg:inline text-[10px] font-bold uppercase">Pré-carregar</span>
+                                                    </button>
+                                                )}
+                                                
                                                 <button 
-                                                    onClick={(e) => handleDeleteOfflineCache(item, e)}
-                                                    className="p-2.5 bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm flex items-center gap-1" 
-                                                    title="Excluir lição offline do aparelho"
+                                                    onClick={() => handleGenerateLessonPlan(item)} 
+                                                    className="p-2.5 bg-emerald-50 border border-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm flex items-center gap-1" 
+                                                    title="Estudar Lição Interativa"
                                                 >
-                                                    <Trash size={16} />
-                                                    <span className="hidden lg:inline text-[10px] font-bold uppercase">Excluir</span>
+                                                    <BookOpenText size={18}/> 
+                                                    <span className="hidden lg:inline text-[10px] font-bold uppercase">Estudar com IA</span>
                                                 </button>
-                                            ) : (
-                                                <button 
-                                                    onClick={(e) => handleDownloadForOffline(item, e)}
-                                                    className="p-2.5 bg-indigo-50/50 border border-indigo-150 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-sm flex items-center gap-1" 
-                                                    title="Pré-carregar Lição para uso sem internet"
-                                                >
-                                                    <DownloadCloud size={16} />
-                                                    <span className="hidden lg:inline text-[10px] font-bold uppercase">Pré-carregar</span>
-                                                </button>
-                                            )}
-                                            
-                                            <button 
-                                                onClick={() => handleGenerateLessonPlan(item)} 
-                                                className="p-2.5 bg-emerald-50 border border-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm flex items-center gap-1" 
-                                                title="Estudar Lição Interativa"
-                                            >
-                                                <BookOpenText size={18}/> 
-                                                <span className="hidden lg:inline text-[10px] font-bold uppercase">Estudar com IA</span>
-                                            </button>
-                                        </div>
-                                    )}
-                                />
+                                            </div>
+                                        )}
+                                    />
+                                </div>
                             )}
                         </div>
                     </div>

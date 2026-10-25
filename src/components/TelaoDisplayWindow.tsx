@@ -10,8 +10,11 @@ import {
   HolyricsSlide, 
   HolyricsAlert,
   HolyricsTheme,
-  DEFAULT_HOLYRICS_SLIDES
+  DEFAULT_HOLYRICS_SLIDES,
+  LISTA_FUNDOS_ANIMADOS,
+  HolyricsAnimatedBg
 } from '../services/holyricsService';
+import { AnimatedBackground } from './AnimatedBackground';
 
 interface TelaoDisplayWindowProps {
   initialMode?: 'telao' | 'pulpito';
@@ -30,8 +33,49 @@ export const TelaoDisplayWindow: React.FC<TelaoDisplayWindowProps> = ({ initialM
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showHud, setShowHud] = useState(true);
+  const [showMotionMenu, setShowMotionMenu] = useState(false);
   const hudTimeoutRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Informações oficiais da igreja obtidas do estado ou do banco de dados local
+  const churchInfo = useMemo(() => {
+    let localDbChurch: any = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('gipp_portal_db_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.igreja) localDbChurch = parsed.igreja;
+        }
+      } catch (e) {}
+    }
+
+    const nome = state.igrejaInfo?.nome || state.igrejaNome || localDbChurch?.nome || 'ASSEMBLEIA DE DEUS';
+    const logoUrl = state.igrejaInfo?.logoUrl || state.igrejaLogoUrl || localDbChurch?.logo || localDbChurch?.logo_url;
+    const pastor = state.igrejaInfo?.pastor || localDbChurch?.pastor;
+    const cidade = state.igrejaInfo?.cidade || localDbChurch?.cidade;
+    const uf = state.igrejaInfo?.uf || localDbChurch?.uf;
+    const endereco = state.igrejaInfo?.endereco || localDbChurch?.endereco;
+    const telefone = state.igrejaInfo?.telefone || localDbChurch?.telefone;
+    const email = state.igrejaInfo?.email || localDbChurch?.email;
+    const site = state.igrejaInfo?.site || localDbChurch?.site;
+    const cnpj = state.igrejaInfo?.cnpj || localDbChurch?.cnpj;
+    const subtitulo = state.igrejaInfo?.subtitulo || localDbChurch?.subtitulo || 'Comunhão • Palavra • Louvor • Adoração';
+
+    return {
+      nome,
+      logoUrl,
+      pastor,
+      cidade,
+      uf,
+      endereco,
+      telefone,
+      email,
+      site,
+      cnpj,
+      subtitulo
+    };
+  }, [state.igrejaInfo, state.igrejaNome, state.igrejaLogoUrl]);
 
   // Determina modo inicial de visualização (Púlpito / Stage Display vs Telão Completo)
   const isPulpitoDefault = useMemo(() => {
@@ -201,6 +245,8 @@ export const TelaoDisplayWindow: React.FC<TelaoDisplayWindowProps> = ({ initialM
   const currentIdx = Math.max(0, Math.min(state.indiceAtual || 0, slides.length - 1));
   const currentSlide: HolyricsSlide = slides[currentIdx] || slides[0];
   const nextSlide: HolyricsSlide | undefined = slides[currentIdx + 1];
+  const isMediaSlide = Boolean(currentSlide?.tipo === 'midia_imagem' || currentSlide?.imagemUrl);
+  const imageFitMode = currentSlide?.ajusteImagem || state.enquadramentoImagem || 'contain';
 
   // Informações do Púlpito e Liturgia
   const pulpito = state.pulpito || (holyricsService as any).getDefaultPulpitoState();
@@ -574,6 +620,9 @@ export const TelaoDisplayWindow: React.FC<TelaoDisplayWindowProps> = ({ initialM
         backgroundPosition: 'center'
       }}
     >
+      {/* MOTOR DE FUNDOS ANIMADOS 60FPS (HOLYRICS MOTION BACKGROUNDS) */}
+      <AnimatedBackground bgType={state.fundoAnimado || 'none'} />
+
       {/* HUD DE CONTROLE RÁPIDO DO TELÃO (Auto-hide ao ficar ocioso) */}
       <div 
         className={`absolute top-4 inset-x-4 z-50 flex items-center justify-between transition-opacity duration-300 pointer-events-auto ${
@@ -595,6 +644,98 @@ export const TelaoDisplayWindow: React.FC<TelaoDisplayWindowProps> = ({ initialM
 
         {/* Controles de Disparo e Modo */}
         <div className="flex items-center gap-1.5 bg-black/80 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 shadow-2xl">
+          {/* Seletor de Fundo Animado (Motion Backgrounds) */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMotionMenu(!showMotionMenu)}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                state.fundoAnimado && state.fundoAnimado !== 'none'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                  : 'bg-white/10 hover:bg-white/20 text-slate-300'
+              }`}
+              title="Escolher Fundo Animado (Holyrics Motion Background)"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Fundos Animados</span>
+            </button>
+
+            {showMotionMenu && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-slate-950/95 border border-slate-700/80 rounded-2xl p-2 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 space-y-1">
+                <div className="text-[10px] font-black uppercase text-amber-400 px-2 py-1 tracking-wider border-b border-slate-800 flex items-center justify-between">
+                  <span>Fundos Animados (Holyrics)</span>
+                  <span className="text-[9px] text-emerald-400">60 FPS</span>
+                </div>
+                {LISTA_FUNDOS_ANIMADOS.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      holyricsService.setAnimatedBackground(item.id);
+                      setShowMotionMenu(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+                      (state.fundoAnimado || 'none') === item.id
+                        ? 'bg-indigo-600 text-white font-black shadow-md'
+                        : 'hover:bg-slate-900 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <span className="text-base shrink-0">{item.icone}</span>
+                      <div className="truncate">
+                        <div className="font-bold leading-tight truncate">{item.nome}</div>
+                        <div className="text-[9px] opacity-75 truncate">{item.descricao}</div>
+                      </div>
+                    </div>
+                    {(state.fundoAnimado || 'none') === item.id && (
+                      <Check className="w-3.5 h-3.5 text-white shrink-0 ml-1" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Alternador Rápido de Enquadramento no Telão para Imagens */}
+          {isMediaSlide && (
+            <div className="flex items-center gap-1 border-r border-white/20 pr-2 mr-1">
+              <span className="text-[10px] font-black uppercase text-amber-300 hidden lg:inline tracking-wider">
+                Enquadramento:
+              </span>
+              <button 
+                onClick={() => holyricsService.setImageFitMode('contain')}
+                title="Ajustar Imagem no Espaço (Sem Cortar)"
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  imageFitMode === 'contain' 
+                    ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400 font-black' 
+                    : 'bg-white/10 hover:bg-white/20 text-slate-300'
+                }`}
+              >
+                Ajustar
+              </button>
+              <button 
+                onClick={() => holyricsService.setImageFitMode('cover')}
+                title="Preencher Telão (Sem Bordas)"
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  imageFitMode === 'cover' 
+                    ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400 font-black' 
+                    : 'bg-white/10 hover:bg-white/20 text-slate-300'
+                }`}
+              >
+                Preencher
+              </button>
+              <button 
+                onClick={() => holyricsService.setImageFitMode('fill')}
+                title="Ajustar ao Espaço Total (100% da Tela)"
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  imageFitMode === 'fill' 
+                    ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400 font-black' 
+                    : 'bg-white/10 hover:bg-white/20 text-slate-300'
+                }`}
+              >
+                100% Espaço
+              </button>
+            </div>
+          )}
+
           <button 
             onClick={() => holyricsService.prevSlide()}
             title="Slide Anterior (Seta Esquerda)"
@@ -657,107 +798,162 @@ export const TelaoDisplayWindow: React.FC<TelaoDisplayWindowProps> = ({ initialM
         </div>
       )}
 
-      {/* ESTADO 2: EXIBIR LOGO DA IGREJA EM DESTAQUE */}
+      {/* ESTADO 2: EXIBIR LOGO DA IGREJA EM DESTAQUE COM DADOS OFICIAIS DO BANCO */}
       {state.exibirLogo && !state.blackout && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-12 text-center bg-black/40 backdrop-blur-xs">
-          <div className="w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-tr from-amber-500/20 to-indigo-500/20 border-2 border-amber-400/40 flex items-center justify-center p-6 shadow-2xl mb-8 animate-pulse">
-            {state.igrejaLogoUrl ? (
-              <img src={state.igrejaLogoUrl} alt="Logo Igreja" className="max-h-full object-contain" />
-            ) : (
-              <Shield className="w-24 h-24 text-amber-400" />
-            )}
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-8 sm:p-12 md:p-16 text-center bg-black/60 backdrop-blur-md animate-fadeIn">
+          {/* Brasão / Logo com Halo Luminoso e Borda Nobre */}
+          <div className="relative mb-6 sm:mb-8">
+            <div className="absolute -inset-4 bg-gradient-to-r from-amber-500/30 via-indigo-500/20 to-teal-500/30 rounded-full blur-2xl opacity-75 animate-pulse pointer-events-none"></div>
+            <div className="relative w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-3xl bg-slate-900/80 border-2 border-amber-400/50 backdrop-blur-md p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex items-center justify-center">
+              {churchInfo.logoUrl ? (
+                <img 
+                  src={churchInfo.logoUrl} 
+                  alt={churchInfo.nome} 
+                  className="max-h-full max-w-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.6)]" 
+                />
+              ) : (
+                <Shield className="w-24 h-24 sm:w-32 sm:h-32 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
+              )}
+            </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-wider uppercase text-white drop-shadow-lg">
-            {state.igrejaNome || 'ASSEMBLEIA DE DEUS'}
+
+          {/* Nome Oficial da Igreja */}
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-wider uppercase text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] max-w-5xl leading-tight font-serif">
+            {churchInfo.nome}
           </h1>
-          <p className="text-lg md:text-2xl text-amber-400/90 font-medium tracking-widest mt-3 uppercase">
-            Comunhão • Palavra • Louvor • Adoração
+
+          {/* Liderança Pastoral */}
+          {churchInfo.pastor && (
+            <div className="mt-3 sm:mt-4 px-4 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/30 inline-flex items-center gap-2 shadow-sm">
+              <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-amber-300">
+                Pastor Presidente:
+              </span>
+              <span className="text-sm sm:text-lg md:text-xl font-bold text-white tracking-wide">
+                {churchInfo.pastor}
+              </span>
+            </div>
+          )}
+
+          {/* Localidade / Cidade & UF */}
+          {(churchInfo.cidade || churchInfo.uf) && (
+            <p className="text-base sm:text-xl md:text-2xl text-slate-200 font-bold tracking-widest uppercase mt-3 drop-shadow-md">
+              {churchInfo.cidade}{churchInfo.cidade && churchInfo.uf ? ' • ' : ''}{churchInfo.uf}
+            </p>
+          )}
+
+          {/* Endereço Físico */}
+          {churchInfo.endereco && (
+            <p className="text-xs sm:text-sm md:text-base text-slate-300/90 font-medium tracking-wide mt-1 max-w-3xl drop-shadow-sm">
+              📍 {churchInfo.endereco}
+            </p>
+          )}
+
+          {/* Contato / Redes */}
+          {(churchInfo.telefone || churchInfo.email || churchInfo.site) && (
+            <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-300 font-mono mt-3 justify-center flex-wrap opacity-80">
+              {churchInfo.telefone && <span>📞 {churchInfo.telefone}</span>}
+              {churchInfo.email && <span>✉️ {churchInfo.email}</span>}
+              {churchInfo.site && <span>🌐 {churchInfo.site}</span>}
+            </div>
+          )}
+
+          {/* Lema Denominacional */}
+          <p className="text-xs sm:text-sm md:text-base text-amber-400/90 font-bold tracking-[0.25em] uppercase mt-5 pt-3 border-t border-white/10 max-w-xl">
+            {churchInfo.subtitulo}
           </p>
         </div>
       )}
 
-      {/* ESTADO 3: CONTEÚDO DO SLIDE REGULAR (OU MODO LIMPO) */}
-      <div 
-        className={`flex-1 flex flex-col ${
-          state.modoLowerThird ? 'justify-end pb-12 px-12' : 'justify-center items-center px-8 sm:px-16 md:px-24'
-        } z-10 transition-all duration-300 ${
-          state.limparTexto || state.exibirLogo ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}
-      >
-        {state.modoLowerThird ? (
-          /* Modo Lower Third para OBS e Live Streaming */
-          <div className="w-full max-w-5xl mx-auto bg-slate-950/85 backdrop-blur-md border-l-4 border-amber-400 p-6 rounded-r-2xl shadow-2xl">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-black uppercase tracking-widest text-amber-400">
-                {currentSlide?.titulo}
-              </span>
-              {currentSlide?.subtitulo && (
-                <span className="text-xs text-slate-400">{currentSlide.subtitulo}</span>
+      {/* ESTADO 3: CONTEÚDO DO SLIDE REGULAR OU MÍDIA EXPANDIDA */}
+      {isMediaSlide ? (
+        /* PROJEÇÃO DE MÍDIA / IMAGEM EXPANDIDA EM ALTA RESOLUÇÃO (100% DO TELÃO / SEM POLUIÇÃO VISUAL) */
+        <div 
+          className={`absolute inset-0 flex items-center justify-center z-10 transition-all duration-300 bg-black overflow-hidden ${
+            state.limparTexto || state.exibirLogo ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+        >
+          <img
+            src={currentSlide.imagemUrl}
+            alt={currentSlide.titulo || 'Mídia Projetada'}
+            className={`${
+              imageFitMode === 'cover'
+                ? 'w-full h-full object-cover'
+                : imageFitMode === 'fill'
+                  ? 'w-full h-full object-fill'
+                  : 'w-full h-full object-contain max-w-full max-h-full'
+            }`}
+          />
+          {/* Somente exibe legenda se o operador explicitamente optou por exibir */}
+          {currentSlide.ocultarLegenda === false && currentSlide.titulo && currentSlide.titulo !== 'Mídia' && (
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4 sm:p-6 text-center">
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-black text-white drop-shadow-lg">
+                {currentSlide.titulo}
+              </h2>
+              {currentSlide.subtitulo && (
+                <p className="text-xs sm:text-base text-amber-300 drop-shadow-md mt-1 font-bold">
+                  {currentSlide.subtitulo}
+                </p>
               )}
             </div>
-            <p className="text-2xl md:text-3xl font-bold text-white leading-snug drop-shadow-md">
-              {currentSlide?.versiculo ? `"${currentSlide.versiculo.texto}"` : currentSlide?.texto || currentSlide?.pontos?.join(' • ')}
-            </p>
-            {currentSlide?.versiculo && (
-              <div className="text-right text-sm text-amber-400 font-bold mt-2">
-                — {currentSlide.versiculo.referencia}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Modo Telão Padrão de Igreja / Datashow */
-          <div 
-            key={`${currentSlide?.id || currentIdx}-${state.ultimaAtualizacao}`}
-            className={`w-full max-w-6xl mx-auto ${
-              state.alinhamentoTexto === 'left' ? 'text-left' : 'text-center'
-            } flex flex-col items-center justify-center animate-in fade-in duration-200`}
-            style={{ transform: `scale(${state.tamanhoFonteRatio || 1})`, transformOrigin: 'center center' }}
-          >
-            {/* Header / Subtítulo */}
-            {currentSlide?.subtitulo && (
-              <div className="mb-4">
-                <span className={`inline-block px-4 py-1.5 rounded-full text-sm md:text-base font-black tracking-wider uppercase border ${currentTheme.badgeBg} drop-shadow-sm`}>
-                  {currentSlide.subtitulo}
+          )}
+        </div>
+      ) : (
+        <div 
+          className={`flex-1 flex flex-col ${
+            state.modoLowerThird ? 'justify-end pb-12 px-12' : 'justify-center items-center px-8 sm:px-16 md:px-24'
+          } z-10 transition-all duration-300 ${
+            state.limparTexto || state.exibirLogo ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+        >
+          {state.modoLowerThird ? (
+            /* Modo Lower Third para OBS e Live Streaming */
+            <div className="w-full max-w-5xl mx-auto bg-slate-950/85 backdrop-blur-md border-l-4 border-amber-400 p-6 rounded-r-2xl shadow-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-black uppercase tracking-widest text-amber-400">
+                  {currentSlide?.titulo}
                 </span>
+                {currentSlide?.subtitulo && (
+                  <span className="text-xs text-slate-400">{currentSlide.subtitulo}</span>
+                )}
               </div>
-            )}
-
-            {/* Título Principal */}
-            {currentSlide?.tipo === 'capa' && (
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-none text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] mb-6">
-                {currentSlide.titulo}
-              </h1>
-            )}
-
-            {/* Conteúdo Específico por Tipo */}
-            {currentSlide?.tipo === 'midia_imagem' || currentSlide?.imagemUrl ? (
-              /* Mídia / Imagem de Alta Resolução */
-              <div className="w-full flex-1 flex flex-col items-center justify-center relative my-auto py-2">
-                <div className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center bg-black">
-                  <img
-                    src={currentSlide.imagemUrl}
-                    alt={currentSlide.titulo || 'Mídia Projetada'}
-                    className={`w-full h-full ${
-                      currentSlide.ajusteImagem === 'cover' ? 'object-cover' : 'object-contain'
-                    }`}
-                  />
-                  {currentSlide.titulo && currentSlide.titulo !== 'Mídia' && (
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4 sm:p-6 text-center">
-                      <h2 className="text-xl sm:text-3xl md:text-4xl font-black text-white drop-shadow-lg">
-                        {currentSlide.titulo}
-                      </h2>
-                      {currentSlide.subtitulo && (
-                        <p className="text-xs sm:text-base text-amber-300 drop-shadow-md mt-1 font-bold">
-                          {currentSlide.subtitulo}
-                        </p>
-                      )}
-                    </div>
-                  )}
+              <p className="text-2xl md:text-3xl font-bold text-white leading-snug drop-shadow-md">
+                {currentSlide?.versiculo ? `"${currentSlide.versiculo.texto}"` : currentSlide?.texto || currentSlide?.pontos?.join(' • ')}
+              </p>
+              {currentSlide?.versiculo && (
+                <div className="text-right text-sm text-amber-400 font-bold mt-2">
+                  — {currentSlide.versiculo.referencia}
                 </div>
-              </div>
-            ) : currentSlide?.tipo === 'texto_livre' ? (
-              /* Texto Livre com Formatação Dinâmica */
-              <div className={`my-auto max-w-5xl w-full ${
+              )}
+            </div>
+          ) : (
+            /* Modo Telão Padrão de Igreja / Datashow */
+            <div 
+              key={`${currentSlide?.id || currentIdx}-${state.ultimaAtualizacao}`}
+              className={`w-full max-w-6xl mx-auto ${
+                state.alinhamentoTexto === 'left' ? 'text-left' : 'text-center'
+              } flex flex-col items-center justify-center animate-in fade-in duration-200`}
+              style={{ transform: `scale(${state.tamanhoFonteRatio || 1})`, transformOrigin: 'center center' }}
+            >
+              {/* Header / Subtítulo */}
+              {currentSlide?.subtitulo && (
+                <div className="mb-4">
+                  <span className={`inline-block px-4 py-1.5 rounded-full text-sm md:text-base font-black tracking-wider uppercase border ${currentTheme.badgeBg} drop-shadow-sm`}>
+                    {currentSlide.subtitulo}
+                  </span>
+                </div>
+              )}
+
+              {/* Título Principal */}
+              {currentSlide?.tipo === 'capa' && (
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-none text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] mb-6">
+                  {currentSlide.titulo}
+                </h1>
+              )}
+
+              {/* Conteúdo Específico por Tipo */}
+              {currentSlide?.tipo === 'texto_livre' ? (
+                /* Texto Livre com Formatação Dinâmica */
+                <div className={`my-auto max-w-5xl w-full ${
                 currentSlide.estiloTexto?.align === 'left' ? 'text-left' :
                 currentSlide.estiloTexto?.align === 'right' ? 'text-right' : 'text-center'
               }`}>
@@ -842,6 +1038,7 @@ export const TelaoDisplayWindow: React.FC<TelaoDisplayWindowProps> = ({ initialM
           </div>
         )}
       </div>
+      )}
 
       {/* CRONÔMETRO REGRESSIVO DO TELÃO (Se ativado pelo painel principal) */}
       {state.cronometro?.ativo && !state.blackout && (

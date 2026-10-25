@@ -616,67 +616,76 @@ const ModuleSecretariaIntegrada = () => {
                 </div>
             </div>
             
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto custom-scrollbar shrink-0 w-full sm:w-fit">
-                <button 
-                    onClick={()=>setTab('contatos')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='contatos' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            {/* BARRA DE ABAS DA SECRETARIA COM ENQUADRAMENTO TOTAL E BARRA DE ROLAGEM */}
+            <div className="w-full max-w-full bg-white/80 dark:bg-slate-900/80 p-2 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs shrink-0 overflow-hidden">
+                <div
+                    className="flex items-center gap-2 overflow-x-auto pb-1.5 w-full"
+                    style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#6366f1 #f1f5f9'
+                    }}
                 >
-                    <BookOpen size={15} /> Agenda de Contatos
-                </button>
-                <button 
-                    onClick={()=>setTab('agenda')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='agenda' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <Calendar size={15} /> Agenda Geral
-                </button>
-                <button 
-                    onClick={()=>setTab('tarefas')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='tarefas' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <CheckSquare size={15} /> Tarefas & Kanban
-                </button>
-                <button 
-                    onClick={()=>setTab('whatsapp')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='whatsapp' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <MessageCircle size={15} /> Mensagens & Templates
-                </button>
-                <button 
-                    onClick={()=>setTab('liturgia')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='liturgia' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <ScrollText size={15} /> Roteiros & Liturgias
-                </button>
-                <button 
-                    onClick={()=>setTab('cartas')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='cartas' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <ArrowRightLeft size={15} /> Cartas de Transferência
-                </button>
-                <button 
-                    onClick={()=>setTab('visitas')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='visitas' ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <HeartHandshake size={15} /> Visitas Pastorais
-                </button>
-                <button 
-                    onClick={()=>setTab('cautela')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='cautela' ? 'bg-teal-600 text-white border-teal-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <ShieldAlert size={15} /> Termos de Cautela
-                </button>
-                <button 
-                    onClick={()=>setTab('pulpito')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='pulpito' ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <Flame size={15} /> Painel de Púlpito (Ao Vivo)
-                </button>
-                <button 
-                    onClick={()=>setTab('inscricoes')} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${tab==='inscricoes' ? 'bg-violet-600 text-white border-violet-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-                >
-                    <CalendarDays size={15} /> Inscrições & Eventos
-                </button>
+                    <button 
+                        onClick={()=>setTab('contatos')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='contatos' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <BookOpen size={15} className="shrink-0" /> Agenda de Contatos
+                    </button>
+                    <button 
+                        onClick={()=>setTab('agenda')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='agenda' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <Calendar size={15} className="shrink-0" /> Agenda Geral
+                    </button>
+                    <button 
+                        onClick={()=>setTab('tarefas')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='tarefas' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <CheckSquare size={15} className="shrink-0" /> Tarefas & Kanban
+                    </button>
+                    <button 
+                        onClick={()=>setTab('whatsapp')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='whatsapp' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <MessageCircle size={15} className="shrink-0" /> Mensagens & Templates
+                    </button>
+                    <button 
+                        onClick={()=>setTab('liturgia')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='liturgia' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <ScrollText size={15} className="shrink-0" /> Roteiros & Liturgias
+                    </button>
+                    <button 
+                        onClick={()=>setTab('cartas')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='cartas' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <ArrowRightLeft size={15} className="shrink-0" /> Cartas de Transferência
+                    </button>
+                    <button 
+                        onClick={()=>setTab('visitas')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='visitas' ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <HeartHandshake size={15} className="shrink-0" /> Visitas Pastorais
+                    </button>
+                    <button 
+                        onClick={()=>setTab('cautela')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='cautela' ? 'bg-teal-600 text-white border-teal-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <ShieldAlert size={15} className="shrink-0" /> Termos de Cautela
+                    </button>
+                    <button 
+                        onClick={()=>setTab('pulpito')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='pulpito' ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <Flame size={15} className="shrink-0" /> Painel de Púlpito (Ao Vivo)
+                    </button>
+                    <button 
+                        onClick={()=>setTab('inscricoes')} 
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer border ${tab==='inscricoes' ? 'bg-violet-600 text-white border-violet-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                        <CalendarDays size={15} className="shrink-0" /> Inscrições & Eventos
+                    </button>
+                </div>
             </div>
             
             <div className="flex-1 overflow-hidden">

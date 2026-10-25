@@ -13,7 +13,9 @@ import {
   HARPA_CRISTAL_HINOS,
   VERSICULOS_RAPIDOS,
   ALERTAS_PRE_CONFIGURADOS,
-  DEFAULT_HOLYRICS_SLIDES 
+  DEFAULT_HOLYRICS_SLIDES,
+  LISTA_FUNDOS_ANIMADOS,
+  HolyricsAnimatedBg
 } from '../services/holyricsService';
 import { MODULES_TEOLOGIA } from '../data/ModuleTeologiaData';
 import { ChurchContext } from '../App';
@@ -24,7 +26,8 @@ interface ModuleHolyricsStudioProps {
 }
 
 export const ModuleHolyricsStudio: React.FC<ModuleHolyricsStudioProps> = ({ onClose }) => {
-  const { igreja, addToast, callGeminiAI, setView } = useContext(ChurchContext) || {};
+  const { db, addToast, callGeminiAI, setView } = useContext(ChurchContext) || {};
+  const church = db?.igreja;
   const [state, setState] = useState<HolyricsState>(holyricsService.getState());
   
   // Visualização Principal: Estúdio de Slides vs Painel Integrado de Púlpito
@@ -630,7 +633,7 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
                           if (!n) return;
                           text = text.replace('[NOME]', n);
                         } else if (text.includes('[CHAVE]')) {
-                          text = text.replace('[CHAVE]', (igreja as any)?.chave_pix || 'PIX Oficial');
+                          text = text.replace('[CHAVE]', (church as any)?.chave_pix || 'PIX Oficial');
                         }
                         holyricsService.sendAlert(text, item.tipo, undefined, 30);
                       }}
@@ -1024,6 +1027,23 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
                     Texto Oculto • Fundo Ativo
                   </span>
                 </div>
+              ) : currentSlide?.tipo === 'midia_imagem' || currentSlide?.imagemUrl ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black">
+                  <img
+                    src={currentSlide.imagemUrl}
+                    alt="Mídia"
+                    className={`w-full h-full ${
+                      (currentSlide.ajusteImagem || state.enquadramentoImagem) === 'cover'
+                        ? 'object-cover'
+                        : (currentSlide.ajusteImagem || state.enquadramentoImagem) === 'fill'
+                          ? 'object-fill'
+                          : 'object-contain'
+                    }`}
+                  />
+                  <div className="absolute bottom-1 right-2 text-[8px] bg-black/60 px-1.5 py-0.5 rounded text-amber-300 font-mono">
+                    {(currentSlide.ajusteImagem || state.enquadramentoImagem) === 'cover' ? 'Preenchido' : (currentSlide.ajusteImagem || state.enquadramentoImagem) === 'fill' ? '100% Espaço' : 'Ajustado'}
+                  </div>
+                </div>
               ) : (
                 <>
                   <div className="text-center">
@@ -1056,6 +1076,54 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
                 </>
               )}
             </div>
+
+            {/* Enquadramento no Telão para a Mídia Ativa */}
+            {(currentSlide?.tipo === 'midia_imagem' || currentSlide?.imagemUrl) && (
+              <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl space-y-1.5 mt-2">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-amber-400">
+                  <span>Enquadramento no Telão:</span>
+                  <span className="text-slate-400 font-normal">
+                    {(currentSlide.ajusteImagem || state.enquadramentoImagem) === 'cover' 
+                      ? 'Preencher (Sem Bordas)' 
+                      : (currentSlide.ajusteImagem || state.enquadramentoImagem) === 'fill' 
+                        ? 'Ajustar ao Espaço (100%)' 
+                        : 'Ajustar (Sem Cortar)'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    onClick={() => holyricsService.setImageFitMode('contain')}
+                    className={`py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                      (currentSlide.ajusteImagem || state.enquadramentoImagem || 'contain') === 'contain'
+                        ? 'bg-indigo-600 text-white font-black ring-1 ring-indigo-400'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    Ajustar
+                  </button>
+                  <button
+                    onClick={() => holyricsService.setImageFitMode('cover')}
+                    className={`py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                      (currentSlide.ajusteImagem || state.enquadramentoImagem) === 'cover'
+                        ? 'bg-indigo-600 text-white font-black ring-1 ring-indigo-400'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    Preencher
+                  </button>
+                  <button
+                    onClick={() => holyricsService.setImageFitMode('fill')}
+                    className={`py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                      (currentSlide.ajusteImagem || state.enquadramentoImagem) === 'fill'
+                        ? 'bg-indigo-600 text-white font-black ring-1 ring-indigo-400'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    100% Espaço
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* PREVIEW DO PRÓXIMO SLIDE (A SEGUIR) */}
@@ -1125,13 +1193,27 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
               </button>
 
               <button
-                onClick={() => holyricsService.toggleShowLogo()}
-                className={`col-span-2 py-2.5 font-black text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-                  state.exibirLogo ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                onClick={() => {
+                  holyricsService.toggleShowLogo(church ? {
+                    nome: church.nome,
+                    logoUrl: church.logo || church.logo_url,
+                    pastor: church.pastor,
+                    cidade: church.cidade,
+                    uf: church.uf,
+                    endereco: church.endereco,
+                    telefone: church.telefone,
+                    email: church.email,
+                    site: church.site,
+                    cnpj: church.cnpj,
+                    subtitulo: church.subtitulo || 'Comunhão • Palavra • Louvor • Adoração'
+                  } : undefined);
+                }}
+                className={`col-span-2 py-2.5 font-black text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  state.exibirLogo ? 'bg-amber-500 text-slate-950 shadow-lg border border-amber-400' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
                 }`}
               >
-                <Shield className="w-4 h-4 text-amber-400" />
-                <span>Brasão / Logo da Igreja no Telão</span>
+                <Shield className={`w-4 h-4 ${state.exibirLogo ? 'text-slate-950' : 'text-amber-400'}`} />
+                <span>{state.exibirLogo ? 'Logo Oficial no Ar (Telão)' : 'Brasão / Logo da Igreja no Telão'}</span>
               </button>
             </div>
           </div>
@@ -1156,6 +1238,43 @@ Retorne EXCLUSIVAMENTE um JSON puro no formato:
                   {thm}
                 </button>
               ))}
+            </div>
+
+            {/* Fundos Animados Dinâmicos (Motion Backgrounds Estilo Holyrics) */}
+            <div className="pt-2 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black tracking-widest uppercase text-amber-400 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> Fundos Animados (Holyrics):
+                </span>
+                <span className="text-[9px] text-emerald-400 font-bold">60 FPS</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                {LISTA_FUNDOS_ANIMADOS.map((item) => {
+                  const isActive = (state.fundoAnimado || 'none') === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => holyricsService.setAnimatedBackground(item.id)}
+                      className={`p-2 rounded-xl text-left border transition-all flex items-center gap-2 cursor-pointer ${
+                        isActive
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-amber-400 ring-1 ring-amber-400 shadow-lg'
+                          : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <span className="text-base shrink-0">{item.icone}</span>
+                      <div className="overflow-hidden flex-1">
+                        <div className="text-[10px] font-black truncate leading-tight">
+                          {item.nome}
+                        </div>
+                        <div className="text-[8px] opacity-75 truncate leading-tight">
+                          {item.descricao}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Escala de Tamanho de Fonte */}

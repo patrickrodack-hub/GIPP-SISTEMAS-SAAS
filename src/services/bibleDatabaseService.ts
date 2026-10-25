@@ -333,7 +333,20 @@ class BibleDatabaseService {
   }
 
   /**
+   * Retorna informações resumidas do banco de dados bíblico offline integrado
+   */
+  public getDatabaseSummary() {
+    return {
+      totalBooks: 66,
+      totalChapters: 1189,
+      totalVerses: 31102,
+      translation: 'ARC (Almeida Revista e Corrigida - CPAD)'
+    };
+  }
+
+  /**
    * Gera o estudo homilético e contextual completo do capítulo (consonante à CPAD/CGADB)
+   * utilizando os versículos autênticos do banco de dados bíblico offline
    */
   public getChapterFullStudy(bookName: string, chapter: number, translation = 'ARC'): BibleChapterResult {
     const verses = this.getChapterVerses(bookName, chapter);
@@ -343,61 +356,88 @@ class BibleDatabaseService {
     const division = book?.division || 'Escrituras Sagradas';
     const testament = book?.testament === 'VT' ? 'Antigo Testamento' : 'Novo Testamento';
 
-    const contexto = `## 🌍 Contexto Histórico e Teológico de ${bookName}
-Este capítulo ${chapter} integra a seção dos ${division} no ${testament}. Em perfeita consonância com os 24 capítulos da Declaração de Fé da CGADB (CPAD), o ensino aqui contido revela a soberania divina, a providência imutável do Altíssimo e o compromisso da Igreja em guardar a sã doutrina bíblica e a unção pentecostal.
+    const firstVerse = verses[0] || { verse: 1, text: '' };
+    const midIndex = Math.min(verses.length - 1, Math.floor(verses.length / 2));
+    const midVerse = verses[midIndex] || firstVerse;
+    const lastVerse = verses[verses.length - 1] || firstVerse;
 
-Ao estudarmos ${bookName} capítulo ${chapter} na versão ${translation.toUpperCase()}, somos exortados à santificação pessoal, comunhão fraterna e submissão à vontade revelada nas Sagradas Escrituras.`;
+    const divisionDoctrineMap: Record<string, string> = {
+      'Pentateuco': 'Capítulos 1, 2 e 7 da Declaração de Fé da CGADB (A Inspiração Divina da Lei, o Único Deus Criador e a Criação do Homem e a Aliança)',
+      'Históricos': 'Capítulos 1 e 10 da Declaração de Fé da CGADB (A Soberania de Deus na História Redentiva e a Fidelidade do Senhor ao Seu Povo)',
+      'Poéticos': 'Capítulos 2, 19 e 21 da Declaração de Fé da CGADB (A Adoração em Espírito e em Verdade, a Oração, o Louvor e a Confiança no Altíssimo)',
+      'Profetas Maiores': 'Capítulos 4, 5 e 22 da Declaração de Fé da CGADB (As Profecias Messiânicas sobre Cristo, o Chamado ao Arrependimento e a Esperança Escatológica)',
+      'Profetas Menores': 'Capítulos 6, 10 e 22 da Declaração de Fé da CGADB (O Derramamento do Espírito Santo, o Avivamento Espiritual e o Dia do Senhor)',
+      'Evangelhos': 'Capítulos 4, 5, 10 e 21 da Declaração de Fé da CGADB (A Divindade de Nosso Senhor Jesus Cristo, Sua Obra Vicária, Salvação e Cura Divina)',
+      'Histórico': 'Capítulos 6, 11, 19 e 20 da Declaração de Fé da CGADB (A Igreja Primitiva, o Batismo no Espírito Santo e a Atualidade dos Dons Espirituais)',
+      'Epístolas Paulinas': 'Capítulos 10, 11, 12 e 20 da Declaração de Fé da CGADB (A Justificação pela Fé, a Santificação Cristã, o Corpo de Cristo e os Ministérios)',
+      'Epístolas Gerais': 'Capítulos 10, 14 e 24 da Declaração de Fé da CGADB (A Perseverança dos Santos, a Fé Operosa, a Família Cristã e a Sã Doutrina)',
+      'Revelação': 'Capítulos 22 e 23 da Declaração de Fé da CGADB (O Arrebatamento da Igreja, a Segunda Vinda de Cristo, o Milênio e o Novo Céu e Nova Terra)'
+    };
+
+    const doctrinalRef = divisionDoctrineMap[division] || 'Capítulos 1 a 24 da Declaração de Fé das Assembleias de Deus (CGADB / CPAD)';
+
+    const contexto = `## 🌍 Contexto Histórico, Exegético e Teológico de ${bookName} ${chapter}
+Este capítulo **${chapter}** de **${bookName}** (composto por **${verses.length} versículos** no texto canônico) integra a divisão de **${division}** no **${testament}**.
+
+- **Fundamentação Doutrinária (CPAD / CGADB):** Alinhado aos **${doctrinalRef}**, este capítulo testifica a inerrância e autoridade plena das Sagradas Escrituras.
+- **Abertura Canônica (${bookName} ${chapter}:${firstVerse.verse}):** *"${firstVerse.text}"*
+- **Desenvolvimento Central (${bookName} ${chapter}:${midVerse.verse}):** *"${midVerse.text}"*
+- **Fechamento do Capítulo (${bookName} ${chapter}:${lastVerse.verse}):** *"${lastVerse.text}"*
+
+Ao meditarmos em **${bookName} ${chapter}** diretamente no Banco da Bíblia Offline (${translation.toUpperCase()}), contemplamos o conselho eterno de Deus para a edificação da Igreja, a formação espiritual do obreiro e o fortalecimento da fé cristã.`;
 
     const esboco = {
-      tema: `A Fidelidade e o Propósito Soberano em ${bookName} ${chapter}`,
-      textoBase: `${bookName} ${chapter}:1`,
+      tema: `A Palavra Viva e o Propósito Eterno em ${bookName} ${chapter}`,
+      textoBase: `${bookName} ${chapter}:${firstVerse.verse} — "${firstVerse.text}"`,
       topicos: [
         {
-          titulo: 'I. A Revelação e o Chamado Soberano de Deus',
-          descricao: `A importância de ouvir atentamente a voz do Senhor registrada em ${bookName} ${chapter}, rejeitando o secularismo e preservando a pureza doutrinária no seio da igreja local.`
+          titulo: `I. O Fundamento da Revelação Divina (${bookName} ${chapter}:${firstVerse.verse})`,
+          descricao: `O capítulo inicia declarando: "${firstVerse.text}". Ensina-nos a ouvir atentamente a voz de Deus revelada nas Escrituras e a caminhar em obediência à sã doutrina pentecostal.`
         },
         {
-          titulo: 'II. A Graça Sustentadora e o Fortalecimento na Fé',
-          descricao: `Como as promessas eternas de Deus nos capacitam a superar momentos de provação, renovando a nossa esperança e comunhão no Espírito Santo.`
+          titulo: `II. A Graça Sustentadora no Centro da Mensagem (${bookName} ${chapter}:${midVerse.verse})`,
+          descricao: `No versículo ${midVerse.verse} lemos: "${midVerse.text}". A providência do Senhor sustenta os fiéis em toda circunstância, renovando o vigor espiritual e a comunhão com o Espírito Santo.`
         },
         {
-          titulo: 'III. Santificação, Oração e Missão Evangelizadora',
-          descricao: `A aplicação diária dos princípios sagrados: viver em retidão, testemunhar de Cristo Jesus com intrepidez e aguardar a bendita esperança do Arrebatamento.`
+          titulo: `III. Perseverança e Aplicação Prática (${bookName} ${chapter}:${lastVerse.verse})`,
+          descricao: `O encerramento do capítulo no versículo ${lastVerse.verse} ("${lastVerse.text}") convoca o crente à santificação diária, ao testemunho cristão fiel e à bendita esperança da volta de Cristo.`
         }
       ]
     };
 
-    const conclusao = `## 💡 Conclusão e Aplicação Prática
-O capítulo ${chapter} de ${bookName} reafirma que a Palavra de Deus permanece para sempre. Como servos do Senhor, devemos aplicar estes preceitos em nosso lar, na igreja e na sociedade, manifestando os frutos do Espírito e o amor cristão genuíno.`;
+    const conclusao = `## 💡 Conclusão e Aplicação Prática para o Púlpito e EBD
+O estudo de **${bookName} ${chapter}** (${verses.length} versículos) reafirma que a Palavra do Senhor permanece para sempre. No ministério pastoral, na Escola Bíblica Dominical e no culto doméstico, este capítulo exorta a igreja a guardar a fé, praticar o amor fraternal e viver sob a direção contínua do Espírito Santo.`;
+
+    const snippetV1 = firstVerse.text.length > 90 ? firstVerse.text.slice(0, 90) + '...' : firstVerse.text;
 
     const quiz = [
       {
-        q: `Qual é o propósito primordial do ensinamento bíblico em ${bookName} capítulo ${chapter}?`,
+        q: `No início de ${bookName} ${chapter} (versículo 1), o texto sagrado declara: "${snippetV1}". Qual deve ser a postura do crente diante deste ensino?`,
         options: [
-          'Instruir e edificar o crente na sã doutrina e na prática da santidade diária',
-          'Apenas promover debates teóricos sem aplicação prática no viver cristão',
-          'Substituir a comunhão fraterna e a oração congregacional',
-          'Estimular interpretações particulares alheias à revelação canônica'
+          'Guardar a Palavra no coração com fé, reverência e prática diária na comunhão da Igreja',
+          'Ler apenas de forma superficial sem aplicar os princípios espirituais na vida cristã',
+          'Substituir a autoridade bíblica por opiniões humanas desconectadas do texto sagrado',
+          'Ignorar o contexto histórico e doutrinário das Sagradas Escrituras'
         ],
         answer: 0
       },
       {
-        q: `De acordo com a tradição bíblica pentecostal, como devemos nos aproximar de ${bookName} ${chapter}?`,
+        q: `O livro de ${bookName} (capítulo ${chapter}, com ${verses.length} versículos) pertence a qual divisão canônica das Escrituras Sagradas?`,
         options: [
-          'Com espírito humilde, oração sincera e submissão à autoridade inspirada das Escrituras',
-          'Com ceticismo acadêmico ou indiferença espiritual',
-          'Priorizando filosofias humanas acima do texto sagrado',
-          'Ignorando o contexto da aliança de Deus com o Seu povo'
+          `${division} (${testament})`,
+          book?.testament === 'VT' ? 'Epístolas Gerais (Novo Testamento)' : 'Pentateuco Mosaico (Antigo Testamento)',
+          'Livros Apócrifos não canônicos',
+          'Crônicas Pós-Apostólicas Contemporâneas'
         ],
         answer: 0
       },
       {
-        q: `Qual é o fruto esperado na vida do obreiro e membro ao meditar em ${bookName}?`,
+        q: `Segundo a Declaração de Fé da CGADB/CPAD e o esboço homilético de ${bookName} ${chapter}, qual é o fruto esperado ao estudarmos este capítulo?`,
         options: [
-          'Crescimento na graça, sabedoria espiritual e zelo pela obra de Deus',
-          'Orgulho intelectual e afastamento dos cultos presenciais',
-          'Contendas e disputas de palavras sem valor edificante',
-          'Desânimo diante das responsabilidades eclesiásticas'
+          'Edificação espiritual, santificação pessoal e fidelidade no anúncio do Evangelho de Cristo',
+          'Debates meramente especulativos sem compromisso com a oração e a santidade',
+          'Afastamento da congregação e dos trabalhos da Escola Bíblica Dominical',
+          'Negligência quanto ao ensino sistemático da Palavra de Deus'
         ],
         answer: 0
       }

@@ -6,6 +6,8 @@
  * enquanto a operação no sistema continua ativa sem interrupções.
  */
 
+export type ImageFitMode = 'contain' | 'cover' | 'fill';
+
 export interface HolyricsSlide {
   id: string;
   tipo: 'capa' | 'versiculo' | 'letra' | 'refrao' | 'topico' | 'doutrina' | 'aplicacao' | 'quiz' | 'conclusao' | 'aviso' | 'texto_livre' | 'midia_imagem';
@@ -17,7 +19,8 @@ export interface HolyricsSlide {
   notas?: string;
   imagemFundo?: string;
   imagemUrl?: string;
-  ajusteImagem?: 'contain' | 'cover';
+  ajusteImagem?: ImageFitMode;
+  ocultarLegenda?: boolean;
   estiloTexto?: {
     fontSize?: 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl';
     align?: 'left' | 'center' | 'right';
@@ -89,7 +92,91 @@ export interface PulpitoState {
   tamanhoFonteBiblia: 'normal' | 'grande' | 'extragrande';
 }
 
+export interface ChurchDisplayInfo {
+  nome: string;
+  logoUrl?: string;
+  pastor?: string;
+  cidade?: string;
+  uf?: string;
+  endereco?: string;
+  telefone?: string;
+  email?: string;
+  site?: string;
+  cnpj?: string;
+  chave_pix?: string;
+  subtitulo?: string;
+}
+
 export type HolyricsTheme = 'navy' | 'dark' | 'amber' | 'clean' | 'royal' | 'cinema';
+
+export type HolyricsAnimatedBg = 
+  | 'none'
+  | 'particulas_douradas'
+  | 'ondas_celestiais'
+  | 'feixes_luz'
+  | 'bokeh_avivamento'
+  | 'nebulosa_oracao'
+  | 'fogo_pentecostal';
+
+export interface AnimatedBgOption {
+  id: HolyricsAnimatedBg;
+  nome: string;
+  descricao: string;
+  corPreview: string;
+  icone: string;
+}
+
+export const LISTA_FUNDOS_ANIMADOS: AnimatedBgOption[] = [
+  {
+    id: 'none',
+    nome: 'Sem Animação',
+    descricao: 'Gradiente sólido clássico',
+    corPreview: 'from-slate-900 to-slate-950',
+    icone: '🚫'
+  },
+  {
+    id: 'particulas_douradas',
+    nome: 'Partículas de Glória',
+    descricao: 'Poeira dourada ascendente e brilho suave',
+    corPreview: 'from-amber-950 via-slate-950 to-amber-900',
+    icone: '✨'
+  },
+  {
+    id: 'ondas_celestiais',
+    nome: 'Ondas Celestiais',
+    descricao: 'Fluxo contínuo de ondas azul-anil e ciano',
+    corPreview: 'from-indigo-950 via-slate-950 to-blue-900',
+    icone: '🌊'
+  },
+  {
+    id: 'feixes_luz',
+    nome: 'Feixes de Luz Celestial',
+    descricao: 'Raios divinos volumétricos em movimento lento',
+    corPreview: 'from-sky-950 via-slate-900 to-indigo-950',
+    icone: '☀️'
+  },
+  {
+    id: 'bokeh_avivamento',
+    nome: 'Bokeh de Adoração',
+    descricao: 'Orbes flutuantes com pulsação suave',
+    corPreview: 'from-purple-950 via-slate-950 to-violet-900',
+    icone: '🔮'
+  },
+  {
+    id: 'nebulosa_oracao',
+    nome: 'Nebulosa de Oração',
+    descricao: 'Nuvens cósmicas vivas em tons violeta e esmeralda',
+    corPreview: 'from-violet-950 via-slate-950 to-emerald-950',
+    icone: '🌌'
+  },
+  {
+    id: 'fogo_pentecostal',
+    nome: 'Chama do Espírito',
+    descricao: 'Brasas vivas e energia do avivamento pentecostal',
+    corPreview: 'from-red-950 via-amber-950 to-slate-950',
+    icone: '🔥'
+  }
+];
 
 export interface HolyricsState {
   ativo: boolean;
@@ -104,6 +191,7 @@ export interface HolyricsState {
   modoLowerThird: boolean; // Terço inferior para live streaming / OBS
   tema: HolyricsTheme;
   fundoTipo: 'gradiente' | 'solido' | 'animado' | 'imagem';
+  fundoAnimado?: HolyricsAnimatedBg;
   fundoCustomUrl?: string;
   tamanhoFonteRatio: number; // 0.8 a 1.6
   alinhamentoTexto: 'center' | 'left';
@@ -111,6 +199,8 @@ export interface HolyricsState {
   cronometro: HolyricsTimer;
   igrejaNome: string;
   igrejaLogoUrl?: string;
+  igrejaInfo?: ChurchDisplayInfo;
+  enquadramentoImagem?: ImageFitMode;
   ultimaAtualizacao: number;
   // Estado Integrado da Tela Secundária (Púlpito / Stage Display)
   pulpito: PulpitoState;
@@ -457,8 +547,39 @@ class HolyricsService {
     };
   }
 
+  public getChurchFromDbCache(): ChurchDisplayInfo | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = localStorage.getItem('gipp_portal_db_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.igreja) {
+          const ig = parsed.igreja;
+          return {
+            nome: ig.nome || 'ASSEMBLEIA DE DEUS',
+            logoUrl: ig.logo || ig.logo_url || undefined,
+            pastor: ig.pastor || '',
+            cidade: ig.cidade || '',
+            uf: ig.uf || '',
+            endereco: ig.endereco || '',
+            telefone: ig.telefone || '',
+            email: ig.email || '',
+            site: ig.site || '',
+            cnpj: ig.cnpj || '',
+            chave_pix: ig.chave_pix || '',
+            subtitulo: ig.subtitulo || 'Comunhão • Palavra • Louvor • Adoração'
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao ler cache do banco da igreja:', e);
+    }
+    return null;
+  }
+
   private loadInitialState(): HolyricsState {
     const defaultPulpito = this.getDefaultPulpitoState();
+    const churchDb = this.getChurchFromDbCache();
 
     if (typeof window !== 'undefined') {
       try {
@@ -477,6 +598,12 @@ class HolyricsService {
                 blocos: parsed.pulpito.blocos && parsed.pulpito.blocos.length > 0 ? parsed.pulpito.blocos : defaultPulpito.blocos,
                 avisos: parsed.pulpito.avisos || defaultPulpito.avisos
               };
+            }
+            // Sincroniza dados da igreja com o banco se ainda não preenchido ou vazio
+            if (churchDb) {
+              parsed.igrejaNome = parsed.igrejaNome || churchDb.nome;
+              parsed.igrejaLogoUrl = parsed.igrejaLogoUrl || churchDb.logoUrl;
+              parsed.igrejaInfo = { ...churchDb, ...(parsed.igrejaInfo || {}) };
             }
             return parsed;
           }
@@ -509,7 +636,9 @@ class HolyricsService {
         tempoTotalSegundos: 0,
         rotulo: 'Horário Oficial'
       },
-      igrejaNome: 'ASSEMBLEIA DE DEUS',
+      igrejaNome: churchDb?.nome || 'ASSEMBLEIA DE DEUS',
+      igrejaLogoUrl: churchDb?.logoUrl,
+      igrejaInfo: churchDb || undefined,
       ultimaAtualizacao: Date.now(),
       pulpito: defaultPulpito
     };
@@ -679,6 +808,12 @@ class HolyricsService {
         break;
       case 'clearAlert':
         this.clearAlert();
+        break;
+      case 'setImageFitMode':
+        if (args) this.setImageFitMode(args);
+        break;
+      case 'setAnimatedBackground':
+        if (args) this.setAnimatedBackground(args);
         break;
       case 'toggleStageDisplay':
         this.toggleStageDisplay();
@@ -1059,12 +1194,32 @@ class HolyricsService {
   }
 
   // Toggle e Set de Logo da Igreja no Telão
-  public toggleShowLogo(): void {
+  public toggleShowLogo(churchData?: Partial<ChurchDisplayInfo>): void {
+    const dbChurch = this.getChurchFromDbCache();
+    if (churchData) {
+      this.updateIgrejaInfo(
+        churchData.nome || dbChurch?.nome || this.state.igrejaNome,
+        churchData.logoUrl || dbChurch?.logoUrl || this.state.igrejaLogoUrl,
+        { ...dbChurch, ...churchData }
+      );
+    } else if (dbChurch) {
+      this.updateIgrejaInfo(dbChurch.nome, dbChurch.logoUrl, dbChurch);
+    }
     this.state.exibirLogo = !this.state.exibirLogo;
     this.saveAndBroadcast();
   }
 
-  public setShowLogo(val: boolean): void {
+  public setShowLogo(val: boolean, churchData?: Partial<ChurchDisplayInfo>): void {
+    const dbChurch = this.getChurchFromDbCache();
+    if (churchData) {
+      this.updateIgrejaInfo(
+        churchData.nome || dbChurch?.nome || this.state.igrejaNome,
+        churchData.logoUrl || dbChurch?.logoUrl || this.state.igrejaLogoUrl,
+        { ...dbChurch, ...churchData }
+      );
+    } else if (dbChurch) {
+      this.updateIgrejaInfo(dbChurch.nome, dbChurch.logoUrl, dbChurch);
+    }
     this.state.exibirLogo = val;
     this.saveAndBroadcast();
   }
@@ -1109,6 +1264,17 @@ class HolyricsService {
     } else {
       this.state.fundoCustomUrl = undefined;
       this.state.fundoTipo = 'gradiente';
+    }
+    this.saveAndBroadcast();
+  }
+
+  // Configurar Fundo Animado (Holyrics Motion Backgrounds)
+  public setAnimatedBackground(bg: HolyricsAnimatedBg): void {
+    this.state.fundoAnimado = bg;
+    if (bg && bg !== 'none') {
+      this.state.fundoTipo = 'animado';
+    } else {
+      this.state.fundoTipo = this.state.fundoCustomUrl ? 'imagem' : 'gradiente';
     }
     this.saveAndBroadcast();
   }
@@ -1211,16 +1377,19 @@ class HolyricsService {
     imagemUrl: string,
     opcoes?: {
       subtitulo?: string;
-      ajuste?: 'contain' | 'cover';
+      ajuste?: ImageFitMode;
+      ocultarLegenda?: boolean;
     }
   ): void {
+    const shouldHideCaption = opcoes?.ocultarLegenda !== undefined ? opcoes.ocultarLegenda : true;
     const slideMidia: HolyricsSlide = {
       id: `midia-img-${Date.now()}`,
       tipo: 'midia_imagem',
       titulo: titulo.trim() || 'Projeção de Imagem',
-      subtitulo: opcoes?.subtitulo || 'Mídia Oficial do Culto',
+      subtitulo: shouldHideCaption ? undefined : opcoes?.subtitulo,
       imagemUrl: imagemUrl,
       ajusteImagem: opcoes?.ajuste || 'contain',
+      ocultarLegenda: shouldHideCaption,
       notas: `Imagem: ${titulo}`
     };
 
@@ -1232,6 +1401,17 @@ class HolyricsService {
     this.state.limparTexto = false;
     this.state.exibirLogo = false;
     this.state.ativo = true;
+    this.state.enquadramentoImagem = slideMidia.ajusteImagem;
+    this.saveAndBroadcast();
+  }
+
+  // Ajustar enquadramento da imagem no telão em tempo real ('contain' | 'cover' | 'fill')
+  public setImageFitMode(fit: ImageFitMode): void {
+    this.state.enquadramentoImagem = fit;
+    const currentSlide = this.state.slides[this.state.indiceAtual];
+    if (currentSlide && (currentSlide.tipo === 'midia_imagem' || currentSlide.imagemUrl)) {
+      currentSlide.ajusteImagem = fit;
+    }
     this.saveAndBroadcast();
   }
 
@@ -1355,9 +1535,23 @@ class HolyricsService {
     this.saveAndBroadcast();
   }
 
-  public updateIgrejaInfo(nome: string, logoUrl?: string): void {
-    this.state.igrejaNome = nome || 'ASSEMBLEIA DE DEUS';
-    if (logoUrl) this.state.igrejaLogoUrl = logoUrl;
+  public updateIgrejaInfo(nome: string, logoUrl?: string, additionalInfo?: Partial<ChurchDisplayInfo>): void {
+    this.state.igrejaNome = nome || this.state.igrejaNome || 'ASSEMBLEIA DE DEUS';
+    if (logoUrl !== undefined) this.state.igrejaLogoUrl = logoUrl;
+    this.state.igrejaInfo = {
+      nome: this.state.igrejaNome,
+      logoUrl: this.state.igrejaLogoUrl,
+      pastor: additionalInfo?.pastor ?? this.state.igrejaInfo?.pastor ?? '',
+      cidade: additionalInfo?.cidade ?? this.state.igrejaInfo?.cidade ?? '',
+      uf: additionalInfo?.uf ?? this.state.igrejaInfo?.uf ?? '',
+      endereco: additionalInfo?.endereco ?? this.state.igrejaInfo?.endereco ?? '',
+      telefone: additionalInfo?.telefone ?? this.state.igrejaInfo?.telefone ?? '',
+      email: additionalInfo?.email ?? this.state.igrejaInfo?.email ?? '',
+      site: additionalInfo?.site ?? this.state.igrejaInfo?.site ?? '',
+      cnpj: additionalInfo?.cnpj ?? this.state.igrejaInfo?.cnpj ?? '',
+      chave_pix: additionalInfo?.chave_pix ?? this.state.igrejaInfo?.chave_pix ?? '',
+      subtitulo: additionalInfo?.subtitulo ?? this.state.igrejaInfo?.subtitulo ?? 'Comunhão • Palavra • Louvor • Adoração'
+    };
     this.saveAndBroadcast();
   }
 

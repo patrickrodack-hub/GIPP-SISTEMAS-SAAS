@@ -94,6 +94,69 @@
       z-index: 100;
       box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
     }
+    #logo-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(12px);
+      z-index: 80;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 3rem;
+    }
+    #logo-img-wrap {
+      width: 14rem;
+      height: 14rem;
+      border-radius: 2rem;
+      background: rgba(15, 23, 42, 0.85);
+      border: 3px solid rgba(251, 191, 36, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+    }
+    #logo-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    #logo-church-name {
+      font-size: 4rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.9);
+      margin-bottom: 0.5rem;
+    }
+    #logo-church-pastor {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #facc15;
+      margin-bottom: 0.5rem;
+    }
+    #logo-church-city {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+    #logo-church-sub {
+      font-size: 1.25rem;
+      color: #94a3b8;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      padding-top: 1rem;
+    }
     #footer-info {
       display: flex;
       justify-content: space-between;
@@ -101,10 +164,50 @@
       opacity: 0.5;
       font-family: monospace;
     }
+    #media-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 15;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #media-overlay img {
+      width: 100%;
+      height: 100%;
+    }
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    #stage {
+      position: relative;
+      z-index: 5;
+    }
   </style>
 </head>
 <body class="theme-navy">
+  <canvas id="bg-canvas"></canvas>
   <div id="blackout-overlay"></div>
+  <div id="media-overlay">
+    <img id="media-img" src="" alt="Mídia" />
+  </div>
+  <div id="logo-overlay">
+    <div id="logo-img-wrap">
+      <img id="logo-img" src="" alt="Logo" style="display:none;" />
+      <div id="logo-fallback" style="font-size:5rem;">🛡️</div>
+    </div>
+    <div id="logo-church-name">ASSEMBLEIA DE DEUS</div>
+    <div id="logo-church-pastor"></div>
+    <div id="logo-church-city"></div>
+    <div id="logo-church-sub">Comunhão • Palavra • Louvor • Adoração</div>
+  </div>
   <div id="stage">
     <div id="header-pill"></div>
     <div id="content-wrap">
@@ -157,6 +260,50 @@
       const blackoutEl = document.getElementById('blackout-overlay');
       blackoutEl.style.display = state.blackout ? 'block' : 'none';
 
+      // Logo da Igreja com Informações do Banco de Dados
+      const logoOverlay = document.getElementById('logo-overlay');
+      if (state.exibirLogo && !state.blackout) {
+        logoOverlay.style.display = 'flex';
+        let info = state.igrejaInfo || {};
+        if (!info.nome) {
+          try {
+            const rawCache = localStorage.getItem('gipp_portal_db_cache');
+            if (rawCache) {
+              const parsed = JSON.parse(rawCache);
+              if (parsed.igreja) info = parsed.igreja;
+            }
+          } catch(e) {}
+        }
+
+        const churchName = info.nome || state.igrejaNome || 'ASSEMBLEIA DE DEUS';
+        const logoUrl = info.logoUrl || info.logo || state.igrejaLogoUrl;
+        const pastorName = info.pastor ? ('Pastor Presidente: ' + info.pastor) : '';
+        const cityState = (info.cidade || '') + (info.cidade && info.uf ? ' • ' : '') + (info.uf || '');
+
+        document.getElementById('logo-church-name').innerText = churchName;
+        
+        const logoImg = document.getElementById('logo-img');
+        const logoFallback = document.getElementById('logo-fallback');
+        if (logoUrl) {
+          logoImg.src = logoUrl;
+          logoImg.style.display = 'block';
+          logoFallback.style.display = 'none';
+        } else {
+          logoImg.style.display = 'none';
+          logoFallback.style.display = 'block';
+        }
+
+        const pastorEl = document.getElementById('logo-church-pastor');
+        pastorEl.innerText = pastorName;
+        pastorEl.style.display = pastorName ? 'block' : 'none';
+
+        const cityEl = document.getElementById('logo-church-city');
+        cityEl.innerText = cityState;
+        cityEl.style.display = cityState ? 'block' : 'none';
+      } else {
+        logoOverlay.style.display = 'none';
+      }
+
       // Tema
       document.body.className = 'theme-' + (state.tema || 'navy');
 
@@ -169,7 +316,7 @@
       const counterEl = document.getElementById('slide-counter');
       const churchEl = document.getElementById('church-label');
 
-      churchEl.innerText = (state.igrejaNome || 'ASSEMBLEIA DE DEUS') + ' • TELÃO HOLYRICS';
+      churchEl.innerText = (state.igrejaNome || (state.igrejaInfo && state.igrejaInfo.nome) || 'ASSEMBLEIA DE DEUS') + ' • TELÃO HOLYRICS';
 
       if (state.limparTexto) {
         titleEl.innerText = '';
@@ -179,7 +326,31 @@
         return;
       }
 
-      if (currentSlide) {
+      // Mídia / Imagem em Tela Cheia sem textos sobrepostos
+      const mediaOverlay = document.getElementById('media-overlay');
+      const mediaImg = document.getElementById('media-img');
+      const isMediaSlide = currentSlide && (currentSlide.tipo === 'midia_imagem' || currentSlide.imagemUrl);
+
+      if (isMediaSlide && !state.blackout && !state.exibirLogo && !state.limparTexto) {
+        mediaOverlay.style.display = 'flex';
+        mediaImg.src = currentSlide.imagemUrl;
+        const fitMode = currentSlide.ajusteImagem || state.enquadramentoImagem || 'contain';
+        if (fitMode === 'cover') {
+          mediaImg.style.objectFit = 'cover';
+        } else if (fitMode === 'fill') {
+          mediaImg.style.objectFit = 'fill';
+        } else {
+          mediaImg.style.objectFit = 'contain';
+        }
+        pillEl.style.display = 'none';
+        titleEl.innerText = '';
+        textEl.innerText = '';
+        refEl.style.display = 'none';
+      } else {
+        mediaOverlay.style.display = 'none';
+      }
+
+      if (currentSlide && !isMediaSlide) {
         counterEl.innerText = 'Slide ' + (state.indiceAtual + 1) + ' / ' + state.slides.length;
 
         if (currentSlide.subtitulo) {
@@ -206,6 +377,9 @@
         }
       }
 
+      // Fundo Animado
+      window.__holyricsBgType = state.fundoAnimado || 'none';
+
       // Alerta
       const alertBar = document.getElementById('alert-bar');
       if (state.alertaAtivo && !state.blackout) {
@@ -215,6 +389,83 @@
         alertBar.style.display = 'none';
       }
     }
+
+    // Motor de Fundos Animados no Canvas
+    (function() {
+      const canvas = document.getElementById('bg-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let width = canvas.width = window.innerWidth;
+      let height = canvas.height = window.innerHeight;
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const particles = Array.from({ length: 65 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: Math.random() * 2.5 + 1,
+        speedY: -(Math.random() * 0.45 + 0.15),
+        speedX: (Math.random() - 0.5) * 0.25,
+        alpha: Math.random() * 0.6 + 0.2,
+        hue: Math.random() * 20 + 38
+      }));
+
+      let waveStep = 0;
+
+      function animate() {
+        const bgType = window.__holyricsBgType || 'none';
+        ctx.clearRect(0, 0, width, height);
+
+        if (bgType === 'particulas_douradas') {
+          const g = ctx.createRadialGradient(width*0.5, height*0.4, 40, width*0.5, height*0.5, Math.max(width, height)*0.8);
+          g.addColorStop(0, '#1c1503');
+          g.addColorStop(1, '#030200');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, width, height);
+          particles.forEach(p => {
+            p.y += p.speedY;
+            p.x += p.speedX;
+            if (p.y < -10) { p.y = height + 10; p.x = Math.random() * width; }
+            ctx.fillStyle = `hsla(${p.hue}, 95%, 65%, ${p.alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        } else if (bgType === 'ondas_celestiais') {
+          ctx.fillStyle = '#030712';
+          ctx.fillRect(0, 0, width, height);
+          waveStep += 0.008;
+          [0.45, 0.58, 0.72].forEach((offset, i) => {
+            ctx.fillStyle = i === 0 ? 'rgba(14,165,233,0.14)' : i === 1 ? 'rgba(99,102,241,0.14)' : 'rgba(45,212,191,0.12)';
+            ctx.beginPath();
+            ctx.moveTo(0, height);
+            for (let x = 0; x <= width; x += 20) {
+              ctx.lineTo(x, height * offset + Math.sin(x * 0.002 + waveStep * (i + 1)) * 75);
+            }
+            ctx.lineTo(width, height);
+            ctx.fill();
+          });
+        } else if (bgType === 'feixes_luz' || bgType === 'bokeh_avivamento' || bgType === 'nebulosa_oracao' || bgType === 'fogo_pentecostal') {
+          waveStep += 0.01;
+          ctx.fillStyle = bgType === 'fogo_pentecostal' ? '#120401' : '#050414';
+          ctx.fillRect(0, 0, width, height);
+          particles.forEach((p, idx) => {
+            p.y += p.speedY * (bgType === 'fogo_pentecostal' ? 1.8 : 0.8);
+            if (p.y < -20) p.y = height + 20;
+            const rad = bgType === 'bokeh_avivamento' ? p.size * 18 : p.size * 2;
+            ctx.fillStyle = bgType === 'fogo_pentecostal' ? `rgba(249,115,22,${p.alpha})` : `rgba(139,92,246,${p.alpha * 0.45})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
 
     // Tela cheia ao duplo clique
     window.addEventListener('dblclick', () => {
