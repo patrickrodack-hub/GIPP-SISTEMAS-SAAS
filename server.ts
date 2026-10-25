@@ -12,6 +12,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collectionGroup, getDocs, doc, setDoc, query, limit, setLogLevel } from "firebase/firestore/lite";
 import { PDFDocument } from 'pdf-lib';
 import QRCode from 'qrcode';
+import { findAuthenticSong, transposeChordsInText } from './src/data/christianSongsDatabase';
 
 // Suprime mensagens ruidosas de RestConnection RPC da biblioteca lite no console
 try {
@@ -868,9 +869,9 @@ app.post("/api/gemini/generate", async (req, res) => {
             return;
         }
 
-        const isSearchQuery = /jusbrasil|diario oficial|consulta|pesquisa|notica|clima|tempo|processo|cpad|ebd|lições|revista/i.test(prompt || '');
+        const isSearchQuery = /jusbrasil|diario oficial|consulta|pesquisa|notica|clima|tempo|processo|cpad|ebd|lições|revista|cifra|acordes|violão|música|louvor|harpa/i.test(prompt || '');
         const config: any = {
-            systemInstruction: "Você é um assistente especialista, teológico e administrativo.",
+            systemInstruction: "Você é um assistente especialista, teológico, musical e administrativo da igreja.",
         };
         if (isSearchQuery) {
             config.tools = [{ googleSearch: {} }];
@@ -879,7 +880,7 @@ app.post("/api/gemini/generate", async (req, res) => {
         const responseText = await callGeminiWithFallback({
             prompt: String(prompt || ''),
             customKey: key,
-            model: "gemini-3.7-flash",
+            model: "gemini-3.8-flash",
             config
         });
 
@@ -891,7 +892,7 @@ app.post("/api/gemini/generate", async (req, res) => {
         const respTokens = Math.ceil(responseText.length / 4);
         const estimatedCost = (promptTokens * 0.075 / 1000000) + (respTokens * 0.30 / 1000000);
 
-        trackApiCall("gemini", "Assistente Pastoral IA", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.7-flash)`);
+        trackApiCall("gemini", "Assistente Pastoral IA", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.8-flash)`);
 
         res.json({ text: responseText });
     } catch (error: any) {
@@ -900,6 +901,207 @@ app.post("/api/gemini/generate", async (req, res) => {
         trackApiCall("gemini", "Assistente Pastoral IA", "error", latency, 0, `Erro: ${friendlyMsg}`);
         console.warn("[Gemini API] Erro tratado com elegância:", friendlyMsg);
         res.json({ text: friendlyMsg });
+    }
+});
+
+// Helper para gerar progressão harmônica inteligente de louvor quando a API estiver sem cota
+function generateOfflinePraiseChords(titulo: string, artista?: string, tomParam?: string): string {
+    const rawTom = (tomParam || 'G').trim();
+    const tom = rawTom.length > 0 ? rawTom : 'G';
+    
+    // Mapeamento de graus harmônicos principais por tonalidade (I, V, vi, IV, ii, iii)
+    const progressions: Record<string, { I: string; V: string; vi: string; IV: string; ii: string; iii: string; pass: string }> = {
+        'C': { I: 'C', V: 'G', vi: 'Am7', IV: 'F', ii: 'Dm7', iii: 'Em7', pass: 'G/B' },
+        'D': { I: 'D', V: 'A', vi: 'Bm7', IV: 'G', ii: 'Em7', iii: 'F#m7', pass: 'A/C#' },
+        'E': { I: 'E', V: 'B', vi: 'C#m7', IV: 'A', ii: 'F#m7', iii: 'G#m7', pass: 'B/D#' },
+        'F': { I: 'F', V: 'C', vi: 'Dm7', IV: 'Bb', ii: 'Gm7', iii: 'Am7', pass: 'C/E' },
+        'G': { I: 'G', V: 'D', vi: 'Em7', IV: 'C9', ii: 'Am7', iii: 'Bm7', pass: 'D/F#' },
+        'A': { I: 'A', V: 'E', vi: 'F#m7', IV: 'D', ii: 'Bm7', iii: 'C#m7', pass: 'E/G#' },
+        'B': { I: 'B', V: 'F#', vi: 'G#m7', IV: 'E', ii: 'C#m7', iii: 'D#m7', pass: 'F#/A#' },
+        'Db': { I: 'Db', V: 'Ab', vi: 'Bbm7', IV: 'Gb', ii: 'Ebm7', iii: 'Fm7', pass: 'Ab/C' },
+        'Eb': { I: 'Eb', V: 'Bb', vi: 'Cm7', IV: 'Ab', ii: 'Fm7', iii: 'Gm7', pass: 'Bb/D' },
+        'Ab': { I: 'Ab', V: 'Eb', vi: 'Fm7', IV: 'Db', ii: 'Bbm7', iii: 'Cm7', pass: 'Eb/G' },
+        'Bb': { I: 'Bb', V: 'F', vi: 'Gm7', IV: 'Eb', ii: 'Cm7', iii: 'Dm7', pass: 'F/A' },
+        'F#': { I: 'F#', V: 'C#', vi: 'D#m7', IV: 'B', ii: 'G#m7', iii: 'A#m7', pass: 'C#/E#' },
+        // Tons Menores
+        'Am': { I: 'Am', V: 'Em', vi: 'F', IV: 'Dm', ii: 'Bdim', iii: 'C', pass: 'G' },
+        'Em': { I: 'Em', V: 'Bm', vi: 'C', IV: 'Am', ii: 'F#dim', iii: 'G', pass: 'D' },
+        'Dm': { I: 'Dm', V: 'Am', vi: 'Bb', IV: 'Gm', ii: 'Edim', iii: 'F', pass: 'C' },
+        'Bm': { I: 'Bm', V: 'F#m', vi: 'G', IV: 'Em', ii: 'C#dim', iii: 'D', pass: 'A' },
+    };
+
+    const p = progressions[tom] || progressions['G'];
+
+    return `[Intro]
+${p.I}   ${p.pass}   ${p.vi}   ${p.IV}
+
+[Verso 1]
+${p.I}                       ${p.pass}
+Diante do Teu trono, ó Deus de majestade
+${p.vi}                     ${p.IV}
+Venho derramar o meu louvor e adoração
+${p.I}                      ${p.pass}
+Pois o Teu grande amor alcançou o meu viver
+${p.vi}                      ${p.IV}
+E a Tua graça santa transformou meu coração
+
+[Pré-Refrão]
+${p.ii}                     ${p.iii}
+Não há outro nome pelo qual possamos crer
+${p.IV}                      ${p.V}
+Pois Tu és o Senhor, exaltado em poder
+
+[Refrão]
+${p.I}                 ${p.pass}
+Santo, Santo, digno é o Cordeiro
+${p.vi}                ${p.IV}
+Reinas para sempre, Deus Consolador
+${p.I}                 ${p.pass}
+Toda terra curva-se em Teu louvor
+${p.vi}                ${p.IV}
+És o meu refúgio e eterno Salvador
+
+[Verso 2]
+${p.I}                      ${p.pass}
+Em meio às tempestades seguro estou em Ti
+${p.vi}                      ${p.IV}
+Tua voz acalma o mar e guia os meus passos
+${p.I}                      ${p.pass}
+Minha esperança viva repousa em Tua cruz
+${p.vi}                      ${p.IV}
+Para sempre cantarei as glórias de Jesus
+
+[Refrão]
+${p.I}                 ${p.pass}
+Santo, Santo, digno é o Cordeiro
+${p.vi}                ${p.IV}
+Reinas para sempre, Deus Consolador
+${p.I}                 ${p.pass}
+Toda terra curva-se em Teu louvor
+${p.vi}                ${p.IV}
+És o meu refúgio e eterno Salvador
+
+[Ponte]
+${p.IV}           ${p.V}
+Aleluia! Ao Rei dos reis
+${p.vi}           ${p.iii}
+Aleluia! Ao grande Eu Sou
+${p.IV}           ${p.V}             ${p.I}
+Toda glória, honra e adoração ao Senhor
+
+[Refrão Final]
+${p.I}                 ${p.pass}
+Santo, Santo, digno é o Cordeiro
+${p.vi}                ${p.IV}
+Reinas para sempre, Deus Consolador
+${p.I}                 ${p.pass}
+Toda terra curva-se em Teu louvor
+${p.vi}                ${p.IV}              ${p.I}
+És o meu refúgio e eterno Salvador!
+
+[Final]
+${p.IV}   ${p.pass}   ${p.vi}   ${p.I}`;
+}
+
+// Endpoint Dedicado para Busca e Localização de Cifras e Letras Reais
+app.post("/api/gemini/gerar-cifra", async (req, res) => {
+    const start = Date.now();
+    try {
+        const { titulo, artista, tom, ritmo, bpm, key } = req.body;
+        const songTitle = (titulo || '').trim();
+        const songArtist = (artista || '').trim();
+        const songTom = (tom || 'G').trim();
+        const songRitmo = (ritmo || '').trim();
+
+        if (!songTitle) {
+            return res.status(400).json({ success: false, error: "Título da música é obrigatório." });
+        }
+
+        // 1. Prioridade Máxima: Busca no Catálogo Oficial de Canções e Hinos Autênticos
+        const localSong = findAuthenticSong(songTitle, songArtist);
+        if (localSong) {
+            const transposed = transposeChordsInText(localSong.letraCifra, localSong.tomOriginal, songTom);
+            const latency = Date.now() - start;
+            trackApiCall("gemini", "Gerador de Cifras", "success", latency, 0, `Cifra autêntica oficial recuperada: ${localSong.titulo} (${localSong.artista}) no tom ${songTom}`);
+            return res.json({
+                success: true,
+                text: transposed,
+                source: 'authentic_database',
+                song: localSong.titulo,
+                artist: localSong.artista,
+                tom: songTom
+            });
+        }
+
+        // 2. Verificação de Cache
+        const cacheKey = `cifra:${songTitle.toLowerCase()}:${songArtist.toLowerCase()}:${songTom}`;
+        if (apiCache.has(cacheKey)) {
+            const cached = apiCache.get(cacheKey);
+            const latency = Date.now() - start;
+            trackApiCall("gemini", "Gerador de Cifras", "cached", latency, 0, `Cache Hit para cifra real: ${songTitle}`);
+            return res.json({ success: true, text: cached.response, source: 'cache', tom: songTom });
+        }
+
+        // 3. Busca Rigorosa na Web via Google Search Grounding (Sem Alucinações ou Letras Falsas)
+        const prompt = `Você é um pesquisador e arquivista musical de louvores e cifras cristãs.
+SUA TAREFA EXCLUSIVA É LOCALIZAR NA WEB A CIFRA REAL E A LETRA ORIGINAL DA CANÇÃO:
+- Título: "${songTitle}"
+${songArtist ? `- Artista / Intérprete: "${songArtist}"` : ''}
+- Tom Solicitado: "${songTom}"
+${songRitmo ? `- Ritmo de Execução: ${songRitmo}` : ''}
+
+REGRAS OBRIGATÓRIAS (RIGOR MÁXIMO):
+1. PESQUISE NA WEB (Cifra Club, Harpa Cristã, Letras.mus.br, Supergospel) e traga a LETRA AUTÊNTICA E OFICIAL cantada pelo artista ou registrada no hinário.
+2. É EXPRESSAMENTE PROIBIDO inventar letras, paródias ou versos fictícios genéricos (como "Diante do Teu trono"). Se a canção existe, retorne a letra original exata de início ao fim.
+3. Obtenha a harmonia real da música e transponha os acordes com precisão musical para o tom "${songTom}".
+4. Posicione cada acorde na linha imediatamente acima das sílabas/palavras cantadas onde ocorre a troca harmônica.
+5. Identifique claramente as seções da música: [Intro], [Verso 1] ou [Primeira Parte], [Pré-Refrão], [Refrão], [Ponte], [Final].
+6. Retorne APENAS o texto cifrado limpo. Não inclua conversas, cumprimentos ou blocos em markdown.
+7. Se a música não for localizada após a pesquisa, responda EXATAMENTE: '⚠️ NAO_ENCONTRADA: Cifra e letra oficial não localizadas na web.'`;
+
+        const config: any = {
+            systemInstruction: "Você é um arquivista musical. Seu objetivo exclusivo é localizar na web a letra real e a cifra autêntica da música solicitada, transpondo os acordes para o tom indicado. Nunca crie letras fictícias.",
+            tools: [{ googleSearch: {} }]
+        };
+
+        let responseText = "";
+        try {
+            responseText = await callGeminiWithFallback({
+                prompt,
+                customKey: key,
+                model: "gemini-3.8-flash",
+                config
+            });
+        } catch (apiErr: any) {
+            console.warn("[Gerador de Cifras] Falha na busca Gemini:", apiErr?.message);
+        }
+
+        // Limpar possíveis delimitadores de markdown adicionados pelo modelo
+        let cleaned = (responseText || '').trim();
+        if (cleaned.startsWith('```cifra')) cleaned = cleaned.substring(8);
+        else if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
+        if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
+        cleaned = cleaned.trim();
+
+        if (cleaned && !cleaned.includes('NAO_ENCONTRADA') && !cleaned.startsWith('⚠️') && !cleaned.includes('RESOURCE_EXHAUSTED')) {
+            // Armazenar no cache
+            apiCache.set(cacheKey, { response: cleaned, timestamp: Date.now(), key: cacheKey });
+            const latency = Date.now() - start;
+            trackApiCall("gemini", "Gerador de Cifras", "success", latency, 0.0001, `Cifra real localizada na web: ${songTitle} no tom ${songTom}`);
+            return res.json({ success: true, text: cleaned, source: 'web_search', tom: songTom });
+        }
+
+        // Se não foi encontrada, informa transparentemente o usuário em vez de inventar uma letra falsa
+        return res.json({
+            success: false,
+            notFound: true,
+            message: `A cifra oficial de "${songTitle}" não foi localizada automaticamente na web. Você pode pesquisar diretamente no Cifra Club ou colar a cifra real para transpor no tom desejado.`
+        });
+    } catch (err: any) {
+        return res.status(500).json({
+            success: false,
+            error: "Erro no servidor ao processar a busca de cifras: " + (err?.message || '')
+        });
     }
 });
 
@@ -987,7 +1189,7 @@ ATENÇÃO: Retorne APENAS um JSON válido no formato abaixo, sem delimitadores m
         const responseText = await callGeminiWithFallback({
             prompt: prompt,
             customKey: apiKey,
-            model: "gemini-3.7-flash",
+            model: "gemini-3.8-flash",
             config: {
                 systemInstruction: "Você é um Professor e Doutor de Teologia Pentecostal Clássica, especialista na Declaração de Fé da CGADB/CPAD. Responda exclusivamente em formato JSON válido e parseável.",
                 temperature: 0.2
@@ -1075,7 +1277,7 @@ Retorne em formato JSON estruturado:
         const responseText = await callGeminiWithFallback({
             prompt: prompt,
             customKey: apiKey,
-            model: "gemini-3.7-flash",
+            model: "gemini-3.8-flash",
             config: {
                 systemInstruction: "Você é um Professor Doutor em Teologia Bíblica e Sistemática da CGADB. Retorne exclusivamente JSON estruturado e válido.",
                 temperature: 0.2
@@ -1381,7 +1583,7 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         let responseText = "";
         try {
             const response = await ai.models.generateContent({
-                model: "gemini-3.7-flash",
+                model: "gemini-3.8-flash",
                 contents: contents,
                 config: {
                     systemInstruction: "Você é um assistente teológico e pedagógico especialista. Seu objetivo é analisar materiais da Escola Bíblica Dominical (EBD) ou validar conteúdos à luz da Declaração de Fé da CPAD. Retorne SOMENTE JSON, sem formatações de markdown adicionais.",
@@ -1399,7 +1601,7 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
                     httpOptions: { headers: { 'User-Agent': 'aistudio-build-server' } }
                 });
                 const response = await fallbackAi.models.generateContent({
-                    model: "gemini-3.7-flash",
+                    model: "gemini-3.8-flash",
                     contents: contents,
                     config: {
                         systemInstruction: "Você é um assistente teológico e pedagógico especialista. Seu objetivo é analisar materiais da Escola Bíblica Dominical (EBD) ou validar conteúdos à luz da Declaração de Fé da CPAD. Retorne SOMENTE JSON, sem formatações de markdown adicionais.",
@@ -1421,7 +1623,7 @@ app.post("/api/gemini/analisar-ebd", async (req, res) => {
         const respTokens = Math.ceil(responseText.length / 4);
         const estimatedCost = (promptTokens * 0.075 / 1000000) + (respTokens * 0.30 / 1000000);
 
-        trackApiCall("gemini", "Análise de EBD (PDF da Revista)", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.7-flash)`);
+        trackApiCall("gemini", "Análise de EBD (PDF da Revista)", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.8-flash)`);
 
         res.json({ text: responseText });
     } catch (error: any) {
@@ -1533,7 +1735,7 @@ app.post("/api/financeiro/analisar-extrato", async (req, res) => {
         };
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-3.8-flash",
             contents: [filePart, textPart],
             config: {
                 responseMimeType: "application/json",
@@ -1570,7 +1772,7 @@ app.post("/api/financeiro/analisar-extrato", async (req, res) => {
         const respTokens = Math.ceil(textResponse.length / 4);
         const estimatedCost = (promptTokens * 0.075 / 1000000) + (respTokens * 0.30 / 1000000);
 
-        trackApiCall("gemini", "Análise de Extrato Bancário", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.5-flash)`);
+        trackApiCall("gemini", "Análise de Extrato Bancário", "success", latency, estimatedCost, `Input: ${promptTokens} tokens, Output: ${respTokens} tokens. (gemini-3.8-flash)`);
 
         res.json(JSON.parse(textResponse.trim()));
     } catch (error: any) {
@@ -2605,7 +2807,7 @@ app.post("/api/admin/test-api-connection", async (req, res) => {
             // Teste real usando o SDK oficial do Google GenAI
             const ai = new GoogleGenAI({ apiKey: resolvedKey.trim() });
             const response = await ai.models.generateContent({
-                model: "gemini-3.5-flash",
+                model: "gemini-3.8-flash",
                 contents: "Diga apenas a palavra 'PONG'",
                 config: {
                     maxOutputTokens: 5,
@@ -2614,12 +2816,12 @@ app.post("/api/admin/test-api-connection", async (req, res) => {
             });
             const text = response.text || "";
             const latency = Date.now() - start;
-            trackApiCall("gemini", "Teste de Conexão", "success", latency, 0.00001, "Teste de integridade bem-sucedido (gemini-3.5-flash).");
+            trackApiCall("gemini", "Teste de Conexão", "success", latency, 0.00001, "Teste de integridade bem-sucedido (gemini-3.8-flash).");
             return res.json({
                 success: true,
-                message: `Conexão bem sucedida com o modelo gemini-3.5-flash! Retorno da IA: "${text.trim()}"`,
+                message: `Conexão bem sucedida com o modelo gemini-3.8-flash! Retorno da IA: "${text.trim()}"`,
                 latency,
-                details: { model: "gemini-3.5-flash", version: "3.5", response: text.trim() }
+                details: { model: "gemini-3.8-flash", version: "3.8", response: text.trim() }
             });
         } else if (api === "asaas") {
             const resolvedKey = key || process.env.ASAAS_API_KEY;

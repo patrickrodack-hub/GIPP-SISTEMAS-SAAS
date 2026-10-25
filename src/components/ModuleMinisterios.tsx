@@ -28,6 +28,7 @@ import {
   transposeChordSheet, transposeNote, transposeKey, calculateSemitonesBetweenKeys, getSemitoneDifference, CHROMATIC_SHARPS,
   MUSICAL_KEY_GROUPS, ALL_MUSICAL_KEYS
 } from '../utils/musicChords';
+import { findAuthenticSong, transposeChordsInText, transposeTextBySemitones } from '../data/christianSongsDatabase';
 import { CifraVisualizer } from './CifraVisualizer';
 
 import { 
@@ -422,37 +423,98 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         };
     }, [dbFirestore, appId]);
 
-    // AI Cifras Fetching
+    // Busca e Localização de Cifras e Letras Reais (Catálogo Cristão + Web Search)
     const handleGenerateChordsWithAI = async (e?: any) => {
         if (e) e.preventDefault();
-        console.log("handleGenerateChordsWithAI called, songTitulo:", songTitulo);
-        if (!songTitulo.trim()) {
+        const trimmedTitle = songTitulo.trim();
+        if (!trimmedTitle) {
             addToast("Informe ao menos o Título da Música.", "warning");
             return;
         }
+
+        const targetTom = songTom || 'G';
         setAiGenerating(true);
-        addToast("Buscando cifras com Inteligência Artificial...", "info");
+        addToast(`Buscando letra e cifra autêntica de "${trimmedTitle}"...`, "info");
+
         try {
-            const prompt = `Forneça a letra completa da música cristã "${songTitulo}" ${songArtista ? `do artista ${songArtista}` : ''} com as cifras corretas sobrepostas em formato de texto limpo. Use o tom principal de "${songTom}". Retorne apenas a letra cifrada formatada, sem saudações ou comentários iniciais/finais. Organize em blocos perfeitamente legíveis. Se não conhecer a música, gere uma letra estimulada com cifras condizentes.`;
-            console.log("Calling Gemini AI with prompt:", prompt);
-            const response = await callGeminiAI(prompt);
-            console.log("Gemini AI response obtained:", response);
-            if (response && typeof response === 'string' && response.trim()) {
-                if (response.startsWith("Erro na IA")) {
-                    addToast(response, "error");
-                } else {
-                    setSongLetraCifra(response);
-                    addToast("Cifras geradas com sucesso pela IA!", "success");
+            // 1. Prioridade Máxima: Pesquisa no Catálogo Oficial de Canções e Hinos da Harpa Cristã
+            const localMatch = findAuthenticSong(trimmedTitle, songArtista);
+            if (localMatch) {
+                const transposed = transposeChordsInText(localMatch.letraCifra, localMatch.tomOriginal, targetTom);
+                setSongLetraCifra(transposed);
+                if (localMatch.ritmo && !songRitmo) setSongRitmo(localMatch.ritmo);
+                if (localMatch.bpm && !songBpm) setSongBpm(localMatch.bpm);
+                addToast(`Cifra autêntica oficial de "${localMatch.titulo}" localizada e transposta para o tom ${targetTom}!`, "success");
+                setAiGenerating(false);
+                return;
+            }
+
+            // 2. Busca na Web via Backend com Google Search Grounding (Sem Alucinações)
+            const clientKey = typeof window !== 'undefined' ? (localStorage.getItem('VITE_GEMINI_API_KEY') || '') : '';
+            let obtainedText = "";
+
+            try {
+                const resp = await fetch('/api/gemini/gerar-cifra', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        titulo: trimmedTitle,
+                        artista: songArtista,
+                        tom: targetTom,
+                        ritmo: songRitmo,
+                        bpm: songBpm,
+                        key: clientKey || undefined
+                    })
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data && data.success && data.text && !data.text.startsWith('⚠️') && !data.text.includes('RESOURCE_EXHAUSTED')) {
+                        obtainedText = data.text;
+                    } else if (data && data.notFound) {
+                        addToast(data.message || `A cifra oficial de "${trimmedTitle}" não foi localizada na web.`, "warning");
+                        setAiGenerating(false);
+                        return;
+                    }
                 }
+            } catch (netErr) {
+                console.warn("[ModuleMinisterios] Rota /api/gemini/gerar-cifra indisponível:", netErr);
+            }
+
+            // 3. Se obteve a cifra real da web
+            if (obtainedText) {
+                let cleaned = obtainedText.trim();
+                if (cleaned.startsWith('```cifra')) cleaned = cleaned.substring(8);
+                else if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
+                if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
+                cleaned = cleaned.trim();
+
+                setSongLetraCifra(cleaned);
+                addToast(`Cifra e letra real de "${trimmedTitle}" localizada e transposta para ${targetTom}!`, "success");
             } else {
-                addToast("Gemini não conseguiu processar no momento. Tente novamente.", "error");
+                addToast(`Não foi possível localizar a cifra oficial de "${trimmedTitle}" automaticamente. Você pode colar a cifra real ou pesquisar no Cifra Club.`, "warning");
             }
         } catch (err: any) {
             console.error("AI Generation Error: ", err);
-            addToast("Falha na geração com IA. " + (err?.message || ''), "error");
+            addToast("Falha na busca de cifras: " + (err?.message || ''), "error");
         } finally {
             setAiGenerating(false);
         }
+    };
+
+    // Transposição Interativa em Tempo Real (+1 / -1 Semitom)
+    const handleTransposeSemitones = (semitones: number) => {
+        if (!songLetraCifra.trim()) {
+            addToast("Insira ou carregue uma cifra antes de transpor.", "info");
+            return;
+        }
+        const transposed = transposeTextBySemitones(songLetraCifra, semitones);
+        setSongLetraCifra(transposed);
+        if (songTom) {
+            const newTom = transposeNote(songTom, semitones);
+            if (newTom) setSongTom(newTom);
+        }
+        addToast(`Cifra transposta (${semitones > 0 ? '+' : ''}${semitones} semitom)!`, "info");
     };
 
     // Persistence Actions
@@ -1810,22 +1872,91 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
 
                                         <div className="flex flex-col space-y-2">
                                             <div className="flex justify-between items-center flex-wrap gap-2">
-                                                <label className="text-xs font-black text-slate-600">Letra & Cifragem da Canção</label>
-                                                <button
-                                                    type="button"
-                                                    disabled={aiGenerating}
-                                                    onClick={handleGenerateChordsWithAI}
-                                                    className="flex items-center gap-1 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-extrabold text-[11px] rounded-xl px-4 py-2 shadow-sm uppercase tracking-wider hover:brightness-105 disabled:opacity-50 transition"
-                                                >
-                                                    {aiGenerating ? <Loader2 className="animate-spin" size={12}/> : <Sparkles size={12}/>}
-                                                    ✨ Buscar com IA Letra e Cifra
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <label className="text-xs font-black text-slate-700">Letra & Cifragem Oficial da Canção</label>
+                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                                                        Autêntica & Original
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <button
+                                                        type="button"
+                                                        disabled={aiGenerating}
+                                                        onClick={handleGenerateChordsWithAI}
+                                                        className="flex items-center gap-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 text-white font-extrabold text-[11px] rounded-xl px-4 py-2 shadow-sm uppercase tracking-wider hover:brightness-105 disabled:opacity-50 transition"
+                                                        title="Localiza a letra oficial e os acordes originais no acervo cristão e na web"
+                                                    >
+                                                        {aiGenerating ? <Loader2 className="animate-spin" size={13}/> : <Search size={13}/>}
+                                                        ✨ Localizar Cifra Real
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const queryStr = `${songTitulo} ${songArtista || ''}`.trim();
+                                                            if (!queryStr) return addToast("Informe o título para pesquisar no Cifra Club.", "info");
+                                                            const url = `https://www.cifraclub.com.br/?q=${encodeURIComponent(queryStr)}`;
+                                                            window.open(url, '_blank', 'noopener,noreferrer');
+                                                        }}
+                                                        className="flex items-center gap-1 text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 rounded-xl px-3 py-2 transition"
+                                                        title="Abrir pesquisa direta no portal Cifra Club"
+                                                    >
+                                                        <Globe size={12}/>
+                                                        Cifra Club
+                                                    </button>
+                                                </div>
                                             </div>
+
+                                            {/* Barra de Ferramentas de Transposição em Tempo Real */}
+                                            <div className="flex items-center justify-between flex-wrap gap-2 bg-slate-100/90 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs">
+                                                <div className="flex items-center gap-2 text-slate-600 font-bold">
+                                                    <Music size={13} className="text-indigo-600"/>
+                                                    <span>Transpor Tom da Cifra:</span>
+                                                    <span className="bg-indigo-600 text-white px-2 py-0.5 rounded font-black text-[11px]">
+                                                        {songTom || 'G'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleTransposeSemitones(-1)}
+                                                        className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-extrabold text-[11px] rounded-lg shadow-2xs transition active:scale-95"
+                                                        title="Abaixar meio tom (-1 semitom)"
+                                                    >
+                                                        - 1/2 Tom
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleTransposeSemitones(1)}
+                                                        className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-extrabold text-[11px] rounded-lg shadow-2xs transition active:scale-95"
+                                                        title="Aumentar meio tom (+1 semitom)"
+                                                    >
+                                                        + 1/2 Tom
+                                                    </button>
+                                                    <select
+                                                        value={songTom}
+                                                        onChange={(e) => {
+                                                            const newKey = e.target.value;
+                                                            if (songLetraCifra.trim() && songTom && newKey !== songTom) {
+                                                                const transposed = transposeChordsInText(songLetraCifra, songTom, newKey);
+                                                                setSongLetraCifra(transposed);
+                                                                addToast(`Cifra transposta de ${songTom} para ${newKey}!`, "info");
+                                                            }
+                                                            setSongTom(newKey);
+                                                        }}
+                                                        className="text-[11px] font-extrabold bg-white border border-slate-300 rounded-lg px-2 py-1 outline-none text-indigo-900"
+                                                    >
+                                                        {ALL_MUSICAL_KEYS.map(k => (
+                                                            <option key={k} value={k}>Mudar tom para {k}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+
                                             <textarea
-                                                className="w-full h-80 text-xs bg-slate-50 border border-slate-200 font-mono rounded-xl p-4 resize-y leading-relaxed outline-none focus:ring-1 focus:ring-indigo-500"
+                                                className="w-full h-84 text-xs bg-slate-50 border border-slate-200 font-mono rounded-xl p-4 resize-y leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                                                 value={songLetraCifra}
                                                 onChange={(e) => setSongLetraCifra(e.target.value)}
-                                                placeholder="Insira as cifras manualmente ou clique para puxar automaticamente por Inteligência Artificial..."
+                                                placeholder={`[Intro]\nG   D/F#   Em7   C9\n\nInsira ou cole a cifra real da canção aqui, ou clique em "Localizar Cifra Real" para buscar a letra e os acordes originais da música...`}
                                             />
                                         </div>
 

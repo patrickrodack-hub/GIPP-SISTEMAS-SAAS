@@ -171,6 +171,26 @@ class RetroSoundEngine {
       osc.stop(now + i * 0.11 + 0.23);
     });
   }
+
+  playHeavenlyHymn() {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    // Arpejo celestial de Harpa e Glória (C4, E4, G4, B4, C5, D5, E5, G5, C6)
+    const notes = [261.63, 329.63, 392.00, 493.88, 523.25, 587.33, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+      gain.gain.setValueAtTime(0.14, now + idx * 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 1.1);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.14);
+      osc.stop(now + idx * 0.14 + 1.15);
+    });
+  }
 }
 
 const soundFX = new RetroSoundEngine();
@@ -1869,7 +1889,7 @@ export default function SonicCristaoGame({ onGameOver, highScore }: SonicCristao
           {/* HUD CLÁSSICO SONIC 2 (CANTO SUPERIOR ESQUERDO + BARRA DO CHEFE) */}
           {gameState === 'playing' && (
             <>
-              <div className="absolute top-3 left-4 z-20 flex flex-col gap-1 pointer-events-none font-mono">
+              <div className="absolute top-3 left-4 z-20 flex flex-col gap-1.5 pointer-events-none font-mono">
                 <div className="flex items-center gap-3 bg-slate-950/75 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-amber-400/30">
                   <span className="text-amber-400 font-black text-xs md:text-sm tracking-wider uppercase">PONTOS</span>
                   <span className="text-white font-black text-sm md:text-base">{score.toLocaleString('pt-BR')}</span>
@@ -1878,12 +1898,23 @@ export default function SonicCristaoGame({ onGameOver, highScore }: SonicCristao
                   <span className="text-white font-black text-sm md:text-base">{formatTime(elapsedSeconds)}</span>
                 </div>
 
-                <div className="flex items-center gap-2 bg-slate-950/75 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-sky-400/30 w-fit">
-                  <Users size={15} className="text-sky-400" />
-                  <span className="text-sky-300 font-black text-xs md:text-sm uppercase tracking-wider">PESSOAS RESGATADAS:</span>
-                  <span className={`font-black text-base md:text-lg ${rescuedSouls === 0 ? 'text-rose-400 animate-pulse' : 'text-amber-300'}`}>
-                    {rescuedSouls}
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 bg-slate-950/75 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-sky-400/30 w-fit">
+                    <Users size={15} className="text-sky-400" />
+                    <span className="text-sky-300 font-black text-xs md:text-sm uppercase tracking-wider">PESSOAS RESGATADAS:</span>
+                    <span className={`font-black text-base md:text-lg ${rescuedSouls === 0 ? 'text-rose-400 animate-pulse' : 'text-amber-300'}`}>
+                      {rescuedSouls}
+                    </span>
+                  </div>
+
+                  {/* VIDAS DE JESUS INTEGRADAS AO TOPO (LIVRE DA ÁREA DOS COMANDOS) */}
+                  <div className="flex items-center gap-1.5 bg-slate-950/75 backdrop-blur-md px-3 py-1.5 rounded-xl border border-amber-400/30">
+                    <div className="w-5 h-5 rounded-full bg-amber-400/20 border border-amber-300 flex items-center justify-center text-amber-300 font-black text-[10px]">
+                      ✝
+                    </div>
+                    <span className="text-[10px] font-black text-amber-300 uppercase leading-none">JESUS</span>
+                    <span className="text-xs font-black text-white leading-tight">× {lives}</span>
+                  </div>
                 </div>
               </div>
 
@@ -1927,64 +1958,106 @@ export default function SonicCristaoGame({ onGameOver, highScore }: SonicCristao
                 </button>
               </div>
 
-              {/* CONTADOR DE VIDAS (CANTO INFERIOR ESQUERDO ESTILO SONIC 2) */}
-              <div className="absolute bottom-3 left-4 z-20 flex items-center gap-2.5 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-amber-400/30 pointer-events-none">
-                <div className="w-7 h-7 rounded-full bg-amber-400/20 border border-amber-300 flex items-center justify-center text-amber-300 font-black text-xs">
-                  ✝
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-amber-300 uppercase leading-none">JESUS</p>
-                  <p className="text-xs font-black text-white leading-tight">× {lives}</p>
-                </div>
-              </div>
+              {/* CONTROLES ESTILO JOYSTICK (DIRECIONAL + BOTÕES ARCADE) COM ELEVAÇÃO E TRANSPARÊNCIA */}
+              <div className="absolute bottom-6 sm:bottom-8 md:bottom-10 inset-x-4 sm:inset-x-8 md:inset-x-12 z-20 flex items-end justify-between pointer-events-none">
+                {/* LADO ESQUERDO: CONTROLE DE JOYSTICK DIRECIONAL (D-PAD CRUZADO TRANSLÚCIDO) */}
+                <div className="relative w-36 h-36 md:w-40 md:h-40 rounded-full bg-slate-950/35 backdrop-blur-md border border-white/20 shadow-2xl flex items-center justify-center p-1 pointer-events-auto select-none touch-none">
+                  {/* Anel estético interior */}
+                  <div className="absolute inset-2 rounded-full border border-white/10 pointer-events-none" />
 
-              {/* CONTROLES ARCADE NA TELA (TOUCH / MOUSE) PARA JOGAR EM QUALQUER DISPOSITIVO */}
-              <div className="absolute bottom-3 inset-x-4 z-20 flex items-end justify-between pointer-events-none">
-                {/* Direcional Esquerda / Baixo / Direita */}
-                <div className="flex items-center gap-2 pointer-events-auto ml-24">
+                  {/* Direcional: Cima */}
                   <button
-                    onPointerDown={() => { keysRef.current.left = true; }}
-                    onPointerUp={() => { keysRef.current.left = false; }}
-                    onPointerLeave={() => { keysRef.current.left = false; }}
-                    className="w-12 h-12 rounded-2xl bg-slate-900/65 active:bg-indigo-600/80 border border-white/20 flex items-center justify-center text-white shadow-lg cursor-pointer"
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); keysRef.current.up = true; }}
+                    onPointerUp={(e) => { e.preventDefault(); keysRef.current.up = false; }}
+                    onPointerLeave={(e) => { e.preventDefault(); keysRef.current.up = false; }}
+                    onPointerCancel={(e) => { e.preventDefault(); keysRef.current.up = false; }}
+                    className="absolute top-1.5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-t-xl rounded-b-sm bg-white/10 hover:bg-white/20 active:bg-sky-400/40 border border-white/20 text-white/90 active:text-sky-200 flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer touch-none"
+                    aria-label="Cima"
+                  >
+                    <ArrowUp size={20} />
+                  </button>
+
+                  {/* Direcional: Baixo (Agachar / Carregar Spin Dash) */}
+                  <button
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); keysRef.current.down = true; }}
+                    onPointerUp={(e) => { e.preventDefault(); keysRef.current.down = false; }}
+                    onPointerLeave={(e) => { e.preventDefault(); keysRef.current.down = false; }}
+                    onPointerCancel={(e) => { e.preventDefault(); keysRef.current.down = false; }}
+                    className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-b-xl rounded-t-sm bg-white/10 hover:bg-white/20 active:bg-amber-400/40 border border-white/20 text-white/90 active:text-amber-200 flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer touch-none"
+                    aria-label="Baixo / Agachar"
+                  >
+                    <ArrowDown size={20} />
+                  </button>
+
+                  {/* Direcional: Esquerda */}
+                  <button
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); keysRef.current.left = true; }}
+                    onPointerUp={(e) => { e.preventDefault(); keysRef.current.left = false; }}
+                    onPointerLeave={(e) => { e.preventDefault(); keysRef.current.left = false; }}
+                    onPointerCancel={(e) => { e.preventDefault(); keysRef.current.left = false; }}
+                    className="absolute left-1.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-l-xl rounded-r-sm bg-white/10 hover:bg-white/20 active:bg-indigo-400/40 border border-white/20 text-white/90 active:text-indigo-200 flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer touch-none"
                     aria-label="Mover para Esquerda"
                   >
-                    <ArrowLeft size={22} />
+                    <ArrowLeft size={20} />
                   </button>
+
+                  {/* Direcional: Direita */}
                   <button
-                    onPointerDown={() => { keysRef.current.down = true; }}
-                    onPointerUp={() => { keysRef.current.down = false; }}
-                    onPointerLeave={() => { keysRef.current.down = false; }}
-                    className="w-12 h-12 rounded-2xl bg-slate-900/65 active:bg-indigo-600/80 border border-white/20 flex items-center justify-center text-white shadow-lg cursor-pointer"
-                    aria-label="Agachar"
-                  >
-                    <ArrowDown size={22} />
-                  </button>
-                  <button
-                    onPointerDown={() => { keysRef.current.right = true; }}
-                    onPointerUp={() => { keysRef.current.right = false; }}
-                    onPointerLeave={() => { keysRef.current.right = false; }}
-                    className="w-12 h-12 rounded-2xl bg-slate-900/65 active:bg-indigo-600/80 border border-white/20 flex items-center justify-center text-white shadow-lg cursor-pointer"
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); keysRef.current.right = true; }}
+                    onPointerUp={(e) => { e.preventDefault(); keysRef.current.right = false; }}
+                    onPointerLeave={(e) => { e.preventDefault(); keysRef.current.right = false; }}
+                    onPointerCancel={(e) => { e.preventDefault(); keysRef.current.right = false; }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-r-xl rounded-l-sm bg-white/10 hover:bg-white/20 active:bg-indigo-400/40 border border-white/20 text-white/90 active:text-indigo-200 flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer touch-none"
                     aria-label="Mover para Direita"
                   >
-                    <ArrowRight size={22} />
+                    <ArrowRight size={20} />
                   </button>
+
+                  {/* Núcleo Central do Joystick */}
+                  <div className="w-10 h-10 rounded-full bg-slate-950/50 border border-white/15 flex items-center justify-center pointer-events-none shadow-inner">
+                    <div className="w-3.5 h-3.5 rounded-full bg-white/25" />
+                  </div>
                 </div>
 
-                {/* Botões de Ação: Spin Dash (Investida de Luz) e Salto */}
-                <div className="flex items-center gap-2.5 pointer-events-auto">
+                {/* LADO DIREITO: BOTÕES DE AÇÃO JOYSTICK (B = SPIN DASH, A = SALTAR) COM TRANSPARÊNCIA */}
+                <div className="flex items-center gap-3 md:gap-5 pointer-events-auto select-none touch-none">
+                  {/* Botão B: SPIN DASH (Investida de Luz) */}
                   <button
-                    onPointerDown={() => triggerSpinDashAction()}
-                    className="px-4 h-12 rounded-2xl bg-amber-500/80 hover:bg-amber-400 active:scale-95 border border-amber-200/50 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg cursor-pointer"
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); triggerSpinDashAction(); }}
+                    className="relative group w-16 h-16 md:w-20 md:h-20 rounded-full bg-amber-500/20 active:bg-amber-500/50 hover:bg-amber-500/30 backdrop-blur-md border-2 border-amber-400/60 shadow-xl shadow-amber-500/20 flex flex-col items-center justify-center text-amber-300 active:scale-90 transition-all cursor-pointer touch-none mb-3 md:mb-5"
+                    aria-label="Spin Dash / Investida de Luz"
                   >
-                    <Zap size={16} fill="currentColor" /> Spin Dash
+                    <span className="absolute -top-1.5 right-1 px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[9px] font-black uppercase shadow-xs">
+                      B
+                    </span>
+                    <Zap size={22} className="text-amber-300 drop-shadow group-active:scale-110 transition-transform" fill="currentColor" />
+                    <span className="text-[9px] font-black tracking-wider uppercase mt-0.5 text-amber-200">
+                      DASH
+                    </span>
                   </button>
+
+                  {/* Botão A: SALTAR / PULO DE LUZ */}
                   <button
-                    onPointerDown={() => { keysRef.current.jump = true; }}
-                    onPointerUp={() => { keysRef.current.jump = false; }}
-                    className="px-5 h-12 rounded-2xl bg-sky-500/85 hover:bg-sky-400 active:scale-95 border border-sky-200/50 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg cursor-pointer"
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); keysRef.current.jump = true; }}
+                    onPointerUp={(e) => { e.preventDefault(); keysRef.current.jump = false; }}
+                    onPointerLeave={(e) => { e.preventDefault(); keysRef.current.jump = false; }}
+                    onPointerCancel={(e) => { e.preventDefault(); keysRef.current.jump = false; }}
+                    className="relative group w-18 h-18 md:w-22 md:h-22 rounded-full bg-sky-500/20 active:bg-sky-500/50 hover:bg-sky-500/30 backdrop-blur-md border-2 border-sky-400/60 shadow-xl shadow-sky-500/25 flex flex-col items-center justify-center text-sky-200 active:scale-90 transition-all cursor-pointer touch-none"
+                    aria-label="Saltar"
                   >
-                    <ArrowUp size={18} /> Saltar
+                    <span className="absolute -top-1.5 right-1.5 px-1.5 py-0.2 rounded-full bg-sky-400 text-slate-950 text-[9px] font-black uppercase shadow-xs">
+                      A
+                    </span>
+                    <ArrowUp size={24} className="text-sky-300 drop-shadow group-active:scale-110 transition-transform" />
+                    <span className="text-[10px] font-black tracking-wider uppercase mt-0.5 text-sky-100">
+                      SALTAR
+                    </span>
                   </button>
                 </div>
               </div>
@@ -2148,43 +2221,16 @@ export default function SonicCristaoGame({ onGameOver, highScore }: SonicCristao
             </div>
           )}
 
-          {/* TELA DE VITÓRIA FINAL */}
+          {/* TELA DE VITÓRIA FINAL: O PEQUENO FILME CELESTIAL (JESUS AO LADO DE DEUS RECEBENDO AS ALMAS NO CÉU) */}
           {gameState === 'victory' && (
-            <div className="absolute inset-0 z-30 bg-gradient-to-b from-slate-950/95 via-indigo-950/95 to-slate-950/95 flex flex-col items-center justify-center p-6 text-center">
-              <Crown size={48} className="text-amber-400 mb-3 animate-bounce" />
-              <h2 className="text-3xl md:text-5xl font-black text-white mb-2">
-                VITÓRIA CELESTIAL COMPLETA!
-              </h2>
-              <p className="text-xs md:text-sm text-amber-200 max-w-lg mb-6">
-                Todas as 3 Zonas foram libertadas, os chefes das trevas foram vencidos e as almas foram resgatadas para o Reino!
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 bg-slate-900/90 border border-amber-500/30 rounded-2xl p-5 max-w-md w-full mb-6">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Pontuação Final</p>
-                  <p className="text-2xl font-black text-amber-400">{score.toLocaleString('pt-BR')} Pts</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Total de Almas Resgatadas</p>
-                  <p className="text-2xl font-black text-sky-400">{totalRescuedAllZones}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => startNewGame(0)}
-                  className="px-7 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer"
-                >
-                  <RotateCcw size={15} /> Jogar Novamente
-                </button>
-                <button
-                  onClick={() => setGameState('menu')}
-                  className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  Voltar ao Menu
-                </button>
-              </div>
-            </div>
+            <HeavenlyVictoryCutscene
+              score={score}
+              totalSouls={totalRescuedAllZones > 0 ? totalRescuedAllZones : Math.max(rescuedSouls, 25)}
+              onRestart={() => startNewGame(0)}
+              onMenu={() => setGameState('menu')}
+              toggleAudio={toggleAudio}
+              muted={muted}
+            />
           )}
 
           {/* TELA DE GAME OVER */}
@@ -2218,3 +2264,552 @@ export default function SonicCristaoGame({ onGameOver, highScore }: SonicCristao
     </div>
   );
 }
+
+// ============================================================================
+// O PEQUENO FILME CELESTIAL: JESUS AO LADO DE DEUS RECEBENDO AS ALMAS NO CÉU
+// ============================================================================
+interface HeavenlyVictoryCutsceneProps {
+  score: number;
+  totalSouls: number;
+  onRestart: () => void;
+  onMenu: () => void;
+  toggleAudio: () => void;
+  muted: boolean;
+}
+
+function HeavenlyVictoryCutscene({
+  score,
+  totalSouls,
+  onRestart,
+  onMenu,
+  toggleAudio,
+  muted
+}: HeavenlyVictoryCutsceneProps) {
+  const cutsceneCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [replayKey, setReplayKey] = useState(0);
+
+  useEffect(() => {
+    soundFX.playHeavenlyHymn();
+  }, [replayKey]);
+
+  useEffect(() => {
+    const canvas = cutsceneCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let t = 0;
+    const W = 1280;
+    const H = 720;
+
+    // Partículas de pó de ouro e luz celestial
+    const sparkles: Array<{ x: number; y: number; spd: number; size: number; alpha: number; phase: number }> = [];
+    for (let i = 0; i < 60; i++) {
+      sparkles.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        spd: 0.4 + Math.random() * 0.8,
+        size: 2 + Math.random() * 3.5,
+        alpha: Math.random(),
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    const render = () => {
+      t++;
+
+      // 1. Céu Celestial em Gradiente Glorioso (Púrpura imperial, Ouro resplandecente e Azul Celeste)
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+      skyGrad.addColorStop(0, '#0f0a2a');
+      skyGrad.addColorStop(0.3, '#3b1257');
+      skyGrad.addColorStop(0.65, '#b45309');
+      skyGrad.addColorStop(1, '#fef08a');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // 2. Feixes de Luz Divina (God Rays) irradiando do Trono Central
+      ctx.save();
+      const throneX = W * 0.68;
+      const throneY = H * 0.32;
+      const numRays = 18;
+      for (let i = 0; i < numRays; i++) {
+        const rayAngle = (Math.PI * 2 * i) / numRays + Math.sin(t * 0.008) * 0.15;
+        const rayWidth = 0.08 + Math.sin(t * 0.02 + i) * 0.03;
+        ctx.fillStyle = `rgba(254, 240, 138, ${0.08 + Math.sin(t * 0.03 + i) * 0.05})`;
+        ctx.beginPath();
+        ctx.moveTo(throneX, throneY);
+        ctx.lineTo(throneX + Math.cos(rayAngle - rayWidth) * 1100, throneY + Math.sin(rayAngle - rayWidth) * 1100);
+        ctx.lineTo(throneX + Math.cos(rayAngle + rayWidth) * 1100, throneY + Math.sin(rayAngle + rayWidth) * 1100);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // 3. A Nova Jerusalém no Horizonte Celestial (Torres de Cristal e Cúpulas Douradas)
+      ctx.save();
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.22)';
+      // Torres ao fundo
+      const spires = [
+        { x: 120, w: 55, h: 220 },
+        { x: 210, w: 75, h: 290 },
+        { x: 320, w: 60, h: 240 },
+        { x: 420, w: 90, h: 330 },
+        { x: 550, w: 80, h: 280 }
+      ];
+      for (const sp of spires) {
+        ctx.beginPath();
+        ctx.moveTo(sp.x, H * 0.6);
+        ctx.lineTo(sp.x + sp.w / 2, H * 0.6 - sp.h);
+        ctx.lineTo(sp.x + sp.w, H * 0.6);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // 4. As Portas Peroladas da Cidade Santa (Pearly Gates)
+      ctx.save();
+      const gateX = W * 0.22;
+      const gateY = H * 0.52;
+
+      // Colunas de Pérola e Jaspe
+      ctx.fillStyle = '#f8fafc';
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 18;
+      ctx.fillRect(gateX - 35, gateY - 170, 32, 230);
+      ctx.fillRect(gateX + 115, gateY - 170, 32, 230);
+      // Arco superior de ouro fino
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 14;
+      ctx.beginPath();
+      ctx.arc(gateX + 56, gateY - 170, 75, Math.PI, 0);
+      ctx.stroke();
+
+      // Pérolas gigantes nos pilares
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(gateX - 19, gateY - 185, 20, 0, Math.PI * 2);
+      ctx.arc(gateX + 131, gateY - 185, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 5. As Ruas de Ouro Transparentes como Cristal (Apocalipse 21:21)
+      ctx.save();
+      const goldRoad = ctx.createLinearGradient(0, H * 0.85, W, H * 0.5);
+      goldRoad.addColorStop(0, 'rgba(234, 179, 8, 0.7)');
+      goldRoad.addColorStop(0.5, 'rgba(254, 240, 138, 0.9)');
+      goldRoad.addColorStop(1, 'rgba(255, 255, 255, 0.95)');
+      ctx.fillStyle = goldRoad;
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      ctx.lineTo(W * 0.45, H);
+      ctx.lineTo(W * 0.85, H * 0.55);
+      ctx.lineTo(W * 0.58, H * 0.55);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 6. Nuvens de Glória Flutuantes (Shekinah)
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      for (let i = 0; i < 7; i++) {
+        const cx = ((i * 240 + t * 0.3) % (W + 280)) - 140;
+        const cy = H * 0.62 + Math.sin(t * 0.02 + i) * 16;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 65, 0, Math.PI * 2);
+        ctx.arc(cx + 55, cy - 20, 80, 0, Math.PI * 2);
+        ctx.arc(cx + 120, cy, 65, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // 7. O TRONO DE DEUS PAI (A MAJESTADE CELESTIAL - Apocalipse 4)
+      ctx.save();
+      // Arco-íris em redor do trono semelhante à esmeralda (Ap 4:3)
+      const rainbowPulse = 180 + Math.sin(t * 0.03) * 15;
+      const rainbowGrad = ctx.createRadialGradient(throneX, throneY, 50, throneX, throneY, rainbowPulse);
+      rainbowGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      rainbowGrad.addColorStop(0.4, 'rgba(254, 240, 138, 0.65)');
+      rainbowGrad.addColorStop(0.75, 'rgba(52, 211, 153, 0.45)');
+      rainbowGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+      ctx.fillStyle = rainbowGrad;
+      ctx.beginPath();
+      ctx.arc(throneX, throneY, rainbowPulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Estrutura do Trono Celestial
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 30;
+      ctx.beginPath();
+      ctx.ellipse(throneX - 60, throneY + 30, 85, 30, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Resplendor Divino do Pai (Luz inacessível e gloriosa)
+      const fatherGlow = ctx.createRadialGradient(throneX - 60, throneY - 15, 10, throneX - 60, throneY - 15, 95);
+      fatherGlow.addColorStop(0, '#ffffff');
+      fatherGlow.addColorStop(0.4, '#fef08a');
+      fatherGlow.addColorStop(0.8, '#f59e0b');
+      fatherGlow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+      ctx.fillStyle = fatherGlow;
+      ctx.beginPath();
+      ctx.arc(throneX - 60, throneY - 15, 95, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 8. JESUS CRISTO À DESTRA DO PAI (RECEBENDO AS ALMAS DE BRAÇOS ABERTOS)
+      ctx.save();
+      const jesusX = throneX + 45;
+      const jesusY = throneY + 30;
+
+      // Auréola da Glória de Jesus
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(jesusX, jesusY - 60, 24, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Coroa do Rei dos Reis
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.moveTo(jesusX - 16, jesusY - 74);
+      ctx.lineTo(jesusX - 18, jesusY - 90);
+      ctx.lineTo(jesusX - 8, jesusY - 80);
+      ctx.lineTo(jesusX, jesusY - 95);
+      ctx.lineTo(jesusX + 8, jesusY - 80);
+      ctx.lineTo(jesusX + 18, jesusY - 90);
+      ctx.lineTo(jesusX + 16, jesusY - 74);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cabelos e barba
+      ctx.fillStyle = '#5c2d16';
+      ctx.beginPath();
+      ctx.arc(jesusX, jesusY - 56, 17, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rosto acolhedor e sereno de Jesus
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.arc(jesusX, jesusY - 56, 13, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Olhos sorridentes e barba
+      ctx.fillStyle = '#5c2d16';
+      ctx.beginPath();
+      ctx.arc(jesusX, jesusY - 52, 10, 0.1, Math.PI - 0.1);
+      ctx.fill();
+      ctx.fillStyle = '#331707';
+      ctx.fillRect(jesusX - 6, jesusY - 60, 3, 3);
+      ctx.fillRect(jesusX + 3, jesusY - 60, 3, 3);
+      // Sorriso paternal bondoso
+      ctx.strokeStyle = '#9a3412';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(jesusX, jesusY - 54, 5, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+
+      // Túnica Branca Resplandecente
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#fef08a';
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.moveTo(jesusX - 18, jesusY - 42);
+      ctx.lineTo(jesusX + 18, jesusY - 42);
+      ctx.lineTo(jesusX + 28, jesusY + 45);
+      ctx.lineTo(jesusX - 28, jesusY + 45);
+      ctx.closePath();
+      ctx.fill();
+
+      // Manto Real Carmesim / Púrpura sobre os ombros
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(jesusX - 18, jesusY - 40);
+      ctx.lineTo(jesusX - 8, jesusY - 40);
+      ctx.lineTo(jesusX + 24, jesusY + 42);
+      ctx.lineTo(jesusX + 12, jesusY + 44);
+      ctx.closePath();
+      ctx.fill();
+
+      // Braços Abertos de Jesus em Gestor de Amor e Acolhimento
+      const armWave = Math.sin(t * 0.05) * 4;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      // Braço esquerdo aberto estendido para as almas
+      ctx.beginPath();
+      ctx.moveTo(jesusX - 16, jesusY - 32);
+      ctx.lineTo(jesusX - 52, jesusY - 18 + armWave);
+      ctx.stroke();
+      // Braço direito aberto acolhedor
+      ctx.beginPath();
+      ctx.moveTo(jesusX + 16, jesusY - 32);
+      ctx.lineTo(jesusX + 52, jesusY - 18 - armWave);
+      ctx.stroke();
+
+      // Mãos com chagas de amor resplandecentes
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.arc(jesusX - 54, jesusY - 18 + armWave, 6, 0, Math.PI * 2);
+      ctx.arc(jesusX + 54, jesusY - 18 - armWave, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(jesusX - 54, jesusY - 18 + armWave, 2.5, 0, Math.PI * 2);
+      ctx.arc(jesusX + 54, jesusY - 18 - armWave, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      // 9. AS ALMAS COM ROSTOS VISÍVEIS ENTRANDO NO CÉU (PROCISSÃO DE JÚBILO)
+      // 6 Almas com rostos humanos detalhados, sorrisos, cabelos, coroas de vida e vestes brancas
+      const soulsList = [
+        { name: 'Jovem Mulher', hairColor: '#6d28d9', hairStyle: 'long', crown: '#facc15', baseDist: 0.78, yOff: 0 },
+        { name: 'Ancião de Barba', hairColor: '#e2e8f0', hairStyle: 'beard', crown: '#fbbf24', baseDist: 0.62, yOff: -12 },
+        { name: 'Criança Alegre', hairColor: '#f59e0b', hairStyle: 'short', crown: '#fde047', baseDist: 0.48, yOff: 8 },
+        { name: 'Homem Jovem', hairColor: '#1e293b', hairStyle: 'curly', crown: '#f59e0b', baseDist: 0.34, yOff: -8 },
+        { name: 'Mulher Idosa', hairColor: '#cbd5e1', hairStyle: 'bun', crown: '#fbbf24', baseDist: 0.20, yOff: 4 },
+        { name: 'Jovem Discípulo', hairColor: '#92400e', hairStyle: 'short', crown: '#facc15', baseDist: 0.06, yOff: -6 }
+      ];
+
+      for (let i = 0; i < soulsList.length; i++) {
+        const s = soulsList[i];
+        // Caminham suavemente pela rua de ouro em direção a Jesus
+        const progress = ((t * 0.0035 + s.baseDist) % 1.0);
+        // Coordenadas ao longo da rua de ouro que sobe da esquerda para a direita
+        const startX = W * 0.12;
+        const startY = H * 0.88;
+        const targetX = jesusX - 70;
+        const targetY = jesusY + 20;
+
+        const soulX = startX + (targetX - startX) * progress;
+        const soulY = startY + (targetY - startY) * progress + s.yOff + Math.sin(t * 0.08 + i) * 5;
+        const scale = 0.65 + progress * 0.42;
+
+        ctx.save();
+        ctx.translate(soulX, soulY);
+        ctx.scale(scale, scale);
+
+        // Aura dourada em volta da alma redimida
+        const soulAura = ctx.createRadialGradient(0, -18, 5, 0, -18, 38);
+        soulAura.addColorStop(0, 'rgba(254, 240, 138, 0.75)');
+        soulAura.addColorStop(1, 'rgba(250, 204, 21, 0)');
+        ctx.fillStyle = soulAura;
+        ctx.beginPath();
+        ctx.arc(0, -18, 38, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Vestes Brancas Purificadas (Apocalipse 7:14)
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#fef08a';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(-11, -8);
+        ctx.lineTo(11, -8);
+        ctx.lineTo(16, 28);
+        ctx.lineTo(-16, 28);
+        ctx.closePath();
+        ctx.fill();
+
+        // Braços erguidos em louvor e gratidão
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(-10, -5);
+        ctx.lineTo(-18, -20 + Math.sin(t * 0.1 + i) * 3);
+        ctx.moveTo(10, -5);
+        ctx.lineTo(18, -20 - Math.sin(t * 0.1 + i) * 3);
+        ctx.stroke();
+
+        // Cabeça e Cabelos
+        ctx.fillStyle = s.hairColor;
+        ctx.beginPath();
+        ctx.arc(0, -20, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rosto Humano Iluminado e Expressivo
+        ctx.fillStyle = '#fed7aa';
+        ctx.beginPath();
+        ctx.arc(0, -19, 10.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bochechas rosadas de felicidade eterna
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.45)';
+        ctx.beginPath();
+        ctx.arc(-5.5, -16.5, 2.5, 0, Math.PI * 2);
+        ctx.arc(5.5, -16.5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Olhos sorridentes (em arco de alegria)
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(-4, -20.5, 2.5, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(4, -20.5, 2.5, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+
+        // Grande sorriso de paz e contentamento
+        ctx.strokeStyle = '#9a3412';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(0, -17, 5, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+
+        // Barba caso seja o ancião
+        if (s.hairStyle === 'beard') {
+          ctx.fillStyle = '#e2e8f0';
+          ctx.beginPath();
+          ctx.arc(0, -13, 7, 0.1, Math.PI - 0.1);
+          ctx.fill();
+        }
+
+        // Coroa de Ouro da Vitória (Coroa da Vida - Apocalipse 2:10)
+        ctx.fillStyle = s.crown;
+        ctx.beginPath();
+        ctx.moveTo(-9, -29);
+        ctx.lineTo(-10, -36);
+        ctx.lineTo(-4, -31);
+        ctx.lineTo(0, -38);
+        ctx.lineTo(4, -31);
+        ctx.lineTo(10, -36);
+        ctx.lineTo(9, -29);
+        ctx.closePath();
+        ctx.fill();
+
+        // Pequena jóia rubi ou esmeralda na coroa
+        ctx.fillStyle = i % 2 === 0 ? '#ef4444' : '#10b981';
+        ctx.beginPath();
+        ctx.arc(0, -32, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // 10. Partículas de Pó Dourado e Centelhas Celestes Subindo
+      ctx.save();
+      for (const sp of sparkles) {
+        sp.y -= sp.spd;
+        if (sp.y < -10) {
+          sp.y = H + 10;
+          sp.x = Math.random() * W;
+        }
+        const blink = Math.abs(Math.sin(t * 0.05 + sp.phase));
+        ctx.fillStyle = `rgba(254, 240, 138, ${0.4 + blink * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.size * (0.8 + blink * 0.4), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      animId = requestAnimationFrame(render);
+    };
+
+    animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
+  }, [replayKey]);
+
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col justify-between overflow-hidden bg-black select-none">
+      {/* CANVAS DO FILME CELESTIAL */}
+      <canvas
+        ref={cutsceneCanvasRef}
+        width={1280}
+        height={720}
+        className="w-full h-full object-contain block absolute inset-0"
+      />
+
+      {/* CABEÇALHO CINEMATOGRÁFICO DECORATIVO */}
+      <div className="relative z-10 p-4 md:p-6 flex items-center justify-between bg-gradient-to-b from-slate-950/85 via-slate-950/40 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/20">
+            <Crown size={22} className="animate-pulse" />
+          </div>
+          <div>
+            <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-amber-400 drop-shadow">
+              FILME DA VITÓRIA ETERNA · O RESGATE CONSUMADO
+            </span>
+            <h2 className="text-sm md:text-lg font-black text-white tracking-wide leading-none mt-0.5">
+              Jesus Cristo Recebe os Redimidos nos Céus
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleAudio}
+            className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-amber-300 border border-amber-400/30 cursor-pointer shadow-md"
+            title={muted ? 'Ativar Harpa Celestial' : 'Silenciar'}
+          >
+            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
+          <button
+            onClick={() => setReplayKey(k => k + 1)}
+            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-md"
+            title="Assistir à cena celestial novamente"
+          >
+            <RotateCcw size={13} /> Assistir Novamente
+          </button>
+        </div>
+      </div>
+
+      {/* PLACA DA PROMESSA SAGRADA E CONTROLES FINAIS */}
+      <div className="relative z-10 p-4 md:p-6 bg-gradient-to-t from-slate-950/95 via-slate-950/85 to-transparent flex flex-col items-center max-w-4xl mx-auto w-full text-center space-y-3">
+        {/* FRASE SOLICITADA PELO USUÁRIO EM DESTAQUE COM MOLDURA DOURADA */}
+        <div className="p-4 md:p-5 rounded-2xl bg-slate-950/80 border-2 border-amber-400/70 backdrop-blur-md shadow-2xl shadow-amber-500/20 w-full max-w-3xl">
+          <div className="flex items-center justify-center gap-2 mb-1.5">
+            <Sparkles size={16} className="text-amber-400 animate-spin" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-300">
+              A PROMESSA ETERNA AO VENCEDOR
+            </span>
+            <Sparkles size={16} className="text-amber-400 animate-spin" />
+          </div>
+          <h3 className="text-base sm:text-xl md:text-2xl font-black text-amber-300 tracking-wide font-serif leading-snug drop-shadow-lg">
+            “Aquele que perseverar até o fim, receberá o seu galardão e herdará os céus.”
+          </h3>
+          <p className="text-[11px] md:text-xs text-amber-100/90 font-medium italic mt-2">
+            “Ao que vencer, dar-lhe-ei que se assente comigo no meu trono; assim como eu venci e me assentei com meu Pai no seu trono.” (Apocalipse 3:21 · Mateus 24:13 · Apocalipse 2:10)
+          </p>
+        </div>
+
+        {/* ESTATÍSTICAS DO GALARDÃO */}
+        <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-mono">
+          <div className="bg-slate-900/80 px-4 py-1.5 rounded-xl border border-sky-400/40 flex items-center gap-2">
+            <Users size={14} className="text-sky-400" />
+            <span className="text-slate-300">Almas Entrando no Céu:</span>
+            <strong className="text-sky-300 text-sm">{totalSouls}</strong>
+          </div>
+          <div className="bg-slate-900/80 px-4 py-1.5 rounded-xl border border-amber-400/40 flex items-center gap-2">
+            <Trophy size={14} className="text-amber-400" />
+            <span className="text-slate-300">Galardão Conquistado:</span>
+            <strong className="text-amber-300 text-sm">{score.toLocaleString('pt-BR')} Pts</strong>
+          </div>
+          <div className="bg-slate-900/80 px-4 py-1.5 rounded-xl border border-emerald-400/40 flex items-center gap-2">
+            <Crown size={14} className="text-emerald-400" />
+            <span className="text-emerald-300 font-bold uppercase">Coroa da Vida Concedida</span>
+          </div>
+        </div>
+
+        {/* BOTÕES DE JOGAR NOVAMENTE E RETORNAR */}
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            onClick={onRestart}
+            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-amber-500/25 active:scale-95 transition-all cursor-pointer"
+          >
+            <RotateCcw size={14} /> Jogar Novamente
+          </button>
+          <button
+            onClick={onMenu}
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+          >
+            Menu Principal
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
