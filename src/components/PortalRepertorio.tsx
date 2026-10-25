@@ -6,7 +6,7 @@ import {
   Play, Pause, Moon, Sun, ExternalLink, ShieldAlert, Sparkles,
   ChevronRight, Mic2, Disc3, Info, Eye, Share2, Check, Columns2,
   Expand, Shrink, Calendar, Clock, Users, CheckCircle2, AlertCircle, Clock3,
-  Guitar, Target
+  Guitar, Target, Globe, Loader2, Plus, Download
 } from 'lucide-react';
 import { ChurchContext } from '../context/ChurchContext';
 import { 
@@ -19,6 +19,7 @@ import {
   CHROMATIC_MINORS_SHARPS, MUSICAL_KEY_GROUPS, ALL_MUSICAL_KEYS,
   CAPO_FRETS, getCapoLabel, getCapoChordShapeKey, suggestCapo
 } from '../utils/musicChords';
+import { findAuthenticSong, transposeChordsInText } from '../data/christianSongsDatabase';
 import { InteractiveWindow } from './InteractiveWindow';
 import { CifraVisualizer } from './CifraVisualizer';
 import { CifraScrollDock } from './CifraScrollDock';
@@ -99,6 +100,22 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
   });
   const [activeLiveSetlist, setActiveLiveSetlist] = useState<SetlistCulto | null>(null);
   const [portalTab, setPortalTab] = useState<'setlists' | 'musicas'>('setlists');
+
+  // Estados de Busca e Importação Automática de Cifras Online (Por Nome da Canção + Cantor)
+  const [showOnlineSearchPanel, setShowOnlineSearchPanel] = useState(false);
+  const [onlineSongTitle, setOnlineSongTitle] = useState('');
+  const [onlineArtistName, setOnlineArtistName] = useState('');
+  const [onlineTargetTom, setOnlineTargetTom] = useState('G');
+  const [onlinePasta, setOnlinePasta] = useState('Louvor & Adoração');
+  const [onlineSearching, setOnlineSearching] = useState(false);
+  const [onlineImporting, setOnlineImporting] = useState(false);
+  const [onlineSuggestions, setOnlineSuggestions] = useState<Array<{
+    titulo: string;
+    artista: string;
+    artistSlug?: string;
+    songSlug?: string;
+    url?: string;
+  }>>([]);
 
   // Modo Tela Cheia Dedicada para a Letra & Cifra da Música
   const [isSongFullscreen, setIsSongFullscreen] = useState<boolean>(false);
@@ -208,6 +225,147 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
       try { localStorage.setItem('gipp_repertorio_stage_mode', String(next)); } catch (_) {}
       return next;
     });
+  };
+
+  // Pesquisar sugestões de cifras online por Nome da Canção + Cantor
+  const handleSearchOnlineSuggestions = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const q = `${onlineSongTitle.trim()} ${onlineArtistName.trim()}`.trim();
+    if (!q) {
+      addToast?.('Informe o nome da canção ou do cantor para pesquisar.', 'warning');
+      return;
+    }
+    setOnlineSearching(true);
+    try {
+      const resp = await fetch(`/api/cifras/pesquisar?q=${encodeURIComponent(q)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data?.results && Array.isArray(data.results) && data.results.length > 0) {
+          setOnlineSuggestions(data.results);
+          addToast?.(`${data.results.length} cifra(s) encontrada(s)! Clique em "Importar & Abrir" na versão desejada.`, 'info');
+        } else {
+          setOnlineSuggestions([]);
+          addToast?.('Nenhuma sugestão listada diretamente; iniciando importação profunda...', 'info');
+          await handleImportOnlineCifra(onlineSongTitle.trim(), onlineArtistName.trim());
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao buscar sugestões online:', err);
+      addToast?.('Erro ao consultar o catálogo online.', 'error');
+    } finally {
+      setOnlineSearching(false);
+    }
+  };
+
+  // Importar Letra + Cifra completa pelo Nome da Canção e Cantor e salvar no Repertório
+  const handleImportOnlineCifra = async (overrideTitle?: string, overrideArtist?: string) => {
+    const titleToSearch = (overrideTitle ?? onlineSongTitle).trim();
+    const artistToSearch = (overrideArtist ?? onlineArtistName).trim();
+    if (!titleToSearch) {
+      addToast?.('Digite o nome da canção para importar a letra e cifra.', 'warning');
+      return;
+    }
+
+    const targetTom = onlineTargetTom || 'G';
+    setOnlineImporting(true);
+    addToast?.(`Importando letra e cifra de "${titleToSearch}"${artistToSearch ? ` (${artistToSearch})` : ''}...`, 'info');
+
+    try {
+      let finalTitle = titleToSearch;
+      let finalArtist = artistToSearch || 'Louvor Consagrado';
+      let finalChordSheet = '';
+      let finalRitmo = 'Adoração';
+      let finalBpm = '75';
+      let sourceLabel = 'Cifra Club Oficial';
+
+      // 1. Checar banco local autêntico primeiro
+      const localMatch = findAuthenticSong(titleToSearch, artistToSearch);
+      if (localMatch) {
+        finalTitle = localMatch.titulo;
+        finalArtist = localMatch.artista || finalArtist;
+        finalChordSheet = transposeChordsInText(localMatch.letraCifra, localMatch.tomOriginal, targetTom);
+        if (localMatch.ritmo) finalRitmo = localMatch.ritmo;
+        if (localMatch.bpm) finalBpm = String(localMatch.bpm);
+        sourceLabel = 'Acervo Harpa & Louvor';
+      } else {
+        // 2. Consultar extrator multi-fonte do servidor (/api/gemini/gerar-cifra)
+        const clientKey = typeof window !== 'undefined' ? (localStorage.getItem('VITE_GEMINI_API_KEY') || '') : '';
+        const resp = await fetch('/api/gemini/gerar-cifra', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            titulo: titleToSearch,
+            artista: artistToSearch,
+            tom: targetTom,
+            key: clientKey || undefined
+          })
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.success && data.text) {
+            let cleaned = String(data.text).trim();
+            if (cleaned.startsWith('```cifra')) cleaned = cleaned.substring(8);
+            else if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
+            if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
+            finalChordSheet = cleaned.trim();
+            if (data.song) finalTitle = data.song;
+            if (data.artist) finalArtist = data.artist;
+            if (data.source === 'cifraclub_direct') sourceLabel = 'Cifra Club Oficial';
+            else if (data.source === 'lrclib_direct') sourceLabel = 'LRCLIB Music DB';
+            else if (data.source === 'gemini_grounding') sourceLabel = 'Busca Web Oficial';
+          } else if (data?.notFound) {
+            addToast?.(data.message || `Não foi possível localizar a cifra de "${titleToSearch}".`, 'warning');
+            setOnlineImporting(false);
+            return;
+          }
+        }
+      }
+
+      if (!finalChordSheet) {
+        addToast?.(`Não foi possível localizar a cifra de "${titleToSearch}". Verifique a grafia do nome e cantor.`, 'warning');
+        setOnlineImporting(false);
+        return;
+      }
+
+      const newSong: MusicaRepertorio = {
+        id: `cifra_${Date.now()}`,
+        titulo: finalTitle,
+        artista: finalArtist,
+        tom: targetTom,
+        ritmo: finalRitmo,
+        bpm: finalBpm,
+        pasta: onlinePasta || 'Louvor & Adoração',
+        letra_cifra: finalChordSheet,
+        arquivos: []
+      };
+
+      const updatedList = [newSong, ...musicas];
+      setMusicas(updatedList);
+      try {
+        localStorage.setItem('louvor_musicas', JSON.stringify(updatedList));
+      } catch (_) {}
+
+      if (dbFirestore && appId) {
+        try {
+          await setDoc(doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'louvor_musicas', newSong.id), newSong);
+        } catch (fireErr) {
+          console.warn('Erro ao salvar música importada no Firestore:', fireErr);
+        }
+      }
+
+      setOnlineSuggestions([]);
+      setShowOnlineSearchPanel(false);
+      setOnlineSongTitle('');
+      setOnlineArtistName('');
+      setActiveModalSong(newSong);
+      addToast?.(`"${finalTitle}" (${finalArtist}) importada via ${sourceLabel} e aberta no tom ${targetTom}!`, 'success');
+    } catch (err: any) {
+      console.error('Erro ao importar cifra online:', err);
+      addToast?.('Falha ao importar cifra online.', 'error');
+    } finally {
+      setOnlineImporting(false);
+    }
   };
 
   // Atualiza a linha ativa baseada na posição do scroll relativo à zona focal de leitura (30% do topo)
@@ -987,8 +1145,8 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
               )}
             </div>
 
-            {/* Filtro Rápido por Tom */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Filtro Rápido por Tom e Botão de Importar Cifra Online */}
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <Music size={13} className="text-violet-600" /> Tom:
               </span>
@@ -1006,8 +1164,151 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                   </optgroup>
                 ))}
               </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOnlineSearchPanel(prev => !prev);
+                  if (!onlineSongTitle && searchTerm) {
+                    setOnlineSongTitle(searchTerm);
+                  }
+                }}
+                className="px-3.5 py-2 bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 hover:brightness-110 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                title="Buscar letra e cifra online pelo Nome da Canção e Cantor (Cifra Club / Harpa / LRCLIB)"
+              >
+                <Globe size={14} />
+                Buscar Cifra Online (Música + Cantor)
+              </button>
             </div>
           </div>
+
+          {/* PAINEL EXPANSÍVEL: BUSCA & IMPORTAÇÃO AUTOMÁTICA POR MÚSICA E CANTOR */}
+          {showOnlineSearchPanel && (
+            <div className="bg-gradient-to-br from-indigo-50/90 via-violet-50/70 to-white dark:from-slate-800/90 dark:via-slate-800/70 dark:to-slate-900 border border-indigo-200/80 dark:border-indigo-800/60 rounded-2xl p-4 space-y-3 animate-fadeIn">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                    <Sparkles size={14} />
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-indigo-950 dark:text-white">
+                      Importador Automático de Letras & Cifras (Sem Chave Paga)
+                    </h4>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                      Digite o nome da canção e do cantor para buscar diretamente no acervo do Cifra Club, Harpa Cristã e LRCLIB já no tom desejado.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowOnlineSearchPanel(false)}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 px-2 py-1 rounded-lg"
+                >
+                  Fechar ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5">
+                <div className="lg:col-span-4">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 block mb-1">
+                    Nome da Canção *
+                  </label>
+                  <input
+                    type="text"
+                    value={onlineSongTitle}
+                    onChange={e => setOnlineSongTitle(e.target.value)}
+                    placeholder="Ex: Bondade de Deus, A Casa é Sua, Raridade..."
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+                <div className="lg:col-span-3">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 block mb-1">
+                    Cantor / Ministério
+                  </label>
+                  <input
+                    type="text"
+                    value={onlineArtistName}
+                    onChange={e => setOnlineArtistName(e.target.value)}
+                    placeholder="Ex: Isaías Saad, Fernandinho, Gabriela Rocha..."
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+                <div className="lg:col-span-2">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 block mb-1">
+                    Tom Desejado
+                  </label>
+                  <select
+                    value={onlineTargetTom}
+                    onChange={e => setOnlineTargetTom(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-indigo-700 dark:text-indigo-300 outline-none"
+                  >
+                    {ALL_MUSICAL_KEYS.map(k => (
+                      <option key={k} value={k}>Tom: {k}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="lg:col-span-3 flex items-end gap-1.5">
+                  <button
+                    type="button"
+                    disabled={onlineSearching || onlineImporting}
+                    onClick={handleSearchOnlineSuggestions}
+                    className="flex-1 py-2 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-[11px] font-black flex items-center justify-center gap-1 transition cursor-pointer disabled:opacity-50"
+                    title="Listar versões encontradas no Cifra Club"
+                  >
+                    {onlineSearching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                    Ver Versões
+                  </button>
+                  <button
+                    type="button"
+                    disabled={onlineImporting || onlineSearching}
+                    onClick={() => handleImportOnlineCifra()}
+                    className="flex-1 py-2 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-black flex items-center justify-center gap-1 shadow-xs transition cursor-pointer disabled:opacity-50"
+                    title="Importar letra e cifra completa diretamente"
+                  >
+                    {onlineImporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                    Importar Cifra
+                  </button>
+                </div>
+              </div>
+
+              {/* Resultados da pesquisa de versões no Cifra Club */}
+              {onlineSuggestions.length > 0 && (
+                <div className="pt-2 border-t border-indigo-200/60 dark:border-slate-700 space-y-2">
+                  <div className="text-[11px] font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-emerald-600" />
+                    Versões localizadas online — clique na versão desejada para importar e abrir a cifra:
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {onlineSuggestions.map((sug, idx) => (
+                      <button
+                        key={`${sug.artistSlug}-${sug.songSlug}-${idx}`}
+                        type="button"
+                        disabled={onlineImporting}
+                        onClick={() => {
+                          setOnlineSongTitle(sug.titulo);
+                          setOnlineArtistName(sug.artista);
+                          handleImportOnlineCifra(sug.titulo, sug.artista);
+                        }}
+                        className="text-left bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 rounded-xl p-2.5 transition flex items-center justify-between gap-2 group cursor-pointer shadow-2xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-black text-xs text-slate-800 dark:text-white group-hover:text-indigo-600 truncate">
+                            {sug.titulo}
+                          </div>
+                          <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 truncate">
+                            🎤 {sug.artista}
+                          </div>
+                        </div>
+                        <span className="px-2 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-black shrink-0">
+                          Importar & Abrir
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Pastas Pills com rolagem horizontal fluida (Idêntico às Categorias da Loja Virtual) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
@@ -1156,17 +1457,32 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
                 Tente alterar a pasta selecionada ou limpar o termo de pesquisa.
               </p>
               {(searchTerm || selectedPasta !== 'todas' || selectedTomFilter !== 'todos') && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedPasta('todas');
-                    setSelectedTomFilter('todos');
-                  }}
-                  className="px-4 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                >
-                  Limpar Todos os Filtros
-                </button>
+                <div className="flex items-center justify-center gap-2 flex-wrap pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedPasta('todas');
+                      setSelectedTomFilter('todos');
+                    }}
+                    className="px-4 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Limpar Todos os Filtros
+                  </button>
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOnlineSongTitle(searchTerm);
+                        setShowOnlineSearchPanel(true);
+                        handleImportOnlineCifra(searchTerm, '');
+                      }}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                    >
+                      <Globe size={14} /> Importar "{searchTerm}" Online Agora
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}

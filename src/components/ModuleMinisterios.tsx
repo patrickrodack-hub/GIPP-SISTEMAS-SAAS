@@ -308,6 +308,14 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
 
     // AI fetching state
     const [aiGenerating, setAiGenerating] = useState(false);
+    const [cifraSuggestions, setCifraSuggestions] = useState<Array<{
+        titulo: string;
+        artista: string;
+        artistSlug?: string;
+        songSlug?: string;
+        url?: string;
+    }>>([]);
+    const [searchingSuggestions, setSearchingSuggestions] = useState(false);
     const [viewChordsSongId, setViewChordsSongId] = useState<string | null>(null);
 
     // Real-time subscribers
@@ -423,10 +431,39 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         };
     }, [dbFirestore, appId]);
 
-    // Busca e Localização de Cifras e Letras Reais (Catálogo Cristão + Web Search)
-    const handleGenerateChordsWithAI = async (e?: any) => {
-        if (e) e.preventDefault();
-        const trimmedTitle = songTitulo.trim();
+    // Pesquisa sugestões rápidas por Nome da Canção + Cantor no índice online
+    const handleSearchCifraSuggestions = async () => {
+        const queryStr = `${songTitulo.trim()} ${songArtista.trim()}`.trim();
+        if (!queryStr) {
+            addToast("Informe o nome da música ou do cantor para pesquisar.", "warning");
+            return;
+        }
+        setSearchingSuggestions(true);
+        try {
+            const resp = await fetch(`/api/cifras/pesquisar?q=${encodeURIComponent(queryStr)}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data?.results && Array.isArray(data.results) && data.results.length > 0) {
+                    setCifraSuggestions(data.results);
+                    addToast(`${data.results.length} cifra(s) encontrada(s)! Clique em uma opção para importar.`, "info");
+                } else {
+                    setCifraSuggestions([]);
+                    addToast("Nenhuma sugestão direta listada; tentando busca profunda...", "info");
+                    await handleGenerateChordsWithAI();
+                }
+            }
+        } catch (err) {
+            console.warn("Erro ao buscar sugestões de cifras:", err);
+        } finally {
+            setSearchingSuggestions(false);
+        }
+    };
+
+    // Busca e Localização de Cifras e Letras Reais (Catálogo Cristão + Extrator Cifra Club + LRCLIB + Web Search)
+    const handleGenerateChordsWithAI = async (e?: any, overrideTitle?: string, overrideArtist?: string) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        const trimmedTitle = (overrideTitle ?? songTitulo).trim();
+        const trimmedArtist = (overrideArtist ?? songArtista).trim();
         if (!trimmedTitle) {
             addToast("Informe ao menos o Título da Música.", "warning");
             return;
@@ -434,14 +471,17 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
 
         const targetTom = songTom || 'G';
         setAiGenerating(true);
-        addToast(`Buscando letra e cifra autêntica de "${trimmedTitle}"...`, "info");
+        setCifraSuggestions([]);
+        addToast(`Buscando letra e cifra oficial de "${trimmedTitle}"${trimmedArtist ? ` (${trimmedArtist})` : ''}...`, "info");
 
         try {
             // 1. Prioridade Máxima: Pesquisa no Catálogo Oficial de Canções e Hinos da Harpa Cristã
-            const localMatch = findAuthenticSong(trimmedTitle, songArtista);
+            const localMatch = findAuthenticSong(trimmedTitle, trimmedArtist);
             if (localMatch) {
                 const transposed = transposeChordsInText(localMatch.letraCifra, localMatch.tomOriginal, targetTom);
                 setSongLetraCifra(transposed);
+                setSongTitulo(localMatch.titulo);
+                if (localMatch.artista) setSongArtista(localMatch.artista);
                 if (localMatch.ritmo && !songRitmo) setSongRitmo(localMatch.ritmo);
                 if (localMatch.bpm && !songBpm) setSongBpm(localMatch.bpm);
                 addToast(`Cifra autêntica oficial de "${localMatch.titulo}" localizada e transposta para o tom ${targetTom}!`, "success");
@@ -449,9 +489,12 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
                 return;
             }
 
-            // 2. Busca na Web via Backend com Google Search Grounding (Sem Alucinações)
+            // 2. Busca Automática Multi-Fonte no Backend (Cifra Club Direto + LRCLIB + Gemini Grounding)
             const clientKey = typeof window !== 'undefined' ? (localStorage.getItem('VITE_GEMINI_API_KEY') || '') : '';
             let obtainedText = "";
+            let resolvedSongTitle = trimmedTitle;
+            let resolvedArtistName = trimmedArtist;
+            let resolvedSource = "Acervo Online";
 
             try {
                 const resp = await fetch('/api/gemini/gerar-cifra', {
@@ -459,7 +502,7 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         titulo: trimmedTitle,
-                        artista: songArtista,
+                        artista: trimmedArtist,
                         tom: targetTom,
                         ritmo: songRitmo,
                         bpm: songBpm,
@@ -471,6 +514,12 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
                     const data = await resp.json();
                     if (data && data.success && data.text && !data.text.startsWith('⚠️') && !data.text.includes('RESOURCE_EXHAUSTED')) {
                         obtainedText = data.text;
+                        if (data.song) resolvedSongTitle = data.song;
+                        if (data.artist) resolvedArtistName = data.artist;
+                        if (data.source === 'cifraclub_direct') resolvedSource = 'Cifra Club Oficial';
+                        else if (data.source === 'lrclib_direct') resolvedSource = 'LRCLIB Music DB';
+                        else if (data.source === 'local_authentic_db') resolvedSource = 'Acervo Harpa & Louvor';
+                        else if (data.source === 'gemini_grounding') resolvedSource = 'Busca Web Oficial';
                     } else if (data && data.notFound) {
                         addToast(data.message || `A cifra oficial de "${trimmedTitle}" não foi localizada na web.`, "warning");
                         setAiGenerating(false);
@@ -490,9 +539,11 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
                 cleaned = cleaned.trim();
 
                 setSongLetraCifra(cleaned);
-                addToast(`Cifra e letra real de "${trimmedTitle}" localizada e transposta para ${targetTom}!`, "success");
+                if (resolvedSongTitle) setSongTitulo(resolvedSongTitle);
+                if (resolvedArtistName) setSongArtista(resolvedArtistName);
+                addToast(`Cifra e letra de "${resolvedSongTitle}" (${resolvedSource}) importada no tom ${targetTom}!`, "success");
             } else {
-                addToast(`Não foi possível localizar a cifra oficial de "${trimmedTitle}" automaticamente. Você pode colar a cifra real ou pesquisar no Cifra Club.`, "warning");
+                addToast(`Não foi possível localizar a cifra oficial de "${trimmedTitle}" automaticamente. Verifique o nome da canção e do cantor.`, "warning");
             }
         } catch (err: any) {
             console.error("AI Generation Error: ", err);
@@ -1882,29 +1933,70 @@ Favor toda a equipe de levitas atualizar seu status de confirmação presencial 
                                                     <button
                                                         type="button"
                                                         disabled={aiGenerating}
-                                                        onClick={handleGenerateChordsWithAI}
-                                                        className="flex items-center gap-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 text-white font-extrabold text-[11px] rounded-xl px-4 py-2 shadow-sm uppercase tracking-wider hover:brightness-105 disabled:opacity-50 transition"
-                                                        title="Localiza a letra oficial e os acordes originais no acervo cristão e na web"
+                                                        onClick={(e) => handleGenerateChordsWithAI(e)}
+                                                        className="flex items-center gap-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 text-white font-extrabold text-[11px] rounded-xl px-4 py-2 shadow-sm uppercase tracking-wider hover:brightness-105 disabled:opacity-50 transition cursor-pointer"
+                                                        title="Importa automaticamente a letra e os acordes posicionados buscando pelo Nome da Canção e Cantor"
                                                     >
                                                         {aiGenerating ? <Loader2 className="animate-spin" size={13}/> : <Search size={13}/>}
-                                                        ✨ Localizar Cifra Real
+                                                        ✨ Importar Letra & Cifra Automaticamente
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => {
-                                                            const queryStr = `${songTitulo} ${songArtista || ''}`.trim();
-                                                            if (!queryStr) return addToast("Informe o título para pesquisar no Cifra Club.", "info");
-                                                            const url = `https://www.cifraclub.com.br/?q=${encodeURIComponent(queryStr)}`;
-                                                            window.open(url, '_blank', 'noopener,noreferrer');
-                                                        }}
-                                                        className="flex items-center gap-1 text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 rounded-xl px-3 py-2 transition"
-                                                        title="Abrir pesquisa direta no portal Cifra Club"
+                                                        disabled={searchingSuggestions || aiGenerating}
+                                                        onClick={handleSearchCifraSuggestions}
+                                                        className="flex items-center gap-1 text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 rounded-xl px-3 py-2 transition cursor-pointer disabled:opacity-50"
+                                                        title="Ver lista de versões e cantores no catálogo do Cifra Club"
                                                     >
-                                                        <Globe size={12}/>
-                                                        Cifra Club
+                                                        {searchingSuggestions ? <Loader2 className="animate-spin" size={12}/> : <Globe size={12}/>}
+                                                        Listar Versões (Cifra Club)
                                                     </button>
                                                 </div>
                                             </div>
+
+                                            {/* Lista de Sugestões Encontradas Online */}
+                                            {cifraSuggestions.length > 0 && (
+                                                <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-3 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                                                            <Globe size={13} className="text-amber-600" />
+                                                            Versões encontradas online — clique para carregar a letra e cifra:
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCifraSuggestions([])}
+                                                            className="text-[10px] font-bold text-amber-700 hover:text-amber-950"
+                                                        >
+                                                            Fechar lista
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                        {cifraSuggestions.map((sug, idx) => (
+                                                            <button
+                                                                key={`${sug.artistSlug}-${sug.songSlug}-${idx}`}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSongTitulo(sug.titulo);
+                                                                    setSongArtista(sug.artista);
+                                                                    handleGenerateChordsWithAI(undefined, sug.titulo, sug.artista);
+                                                                }}
+                                                                className="text-left bg-white hover:bg-indigo-50 border border-amber-200 hover:border-indigo-300 rounded-xl p-2.5 transition flex items-center justify-between gap-2 group cursor-pointer shadow-2xs"
+                                                            >
+                                                                <div className="min-w-0">
+                                                                    <div className="font-black text-xs text-slate-800 group-hover:text-indigo-700 truncate">
+                                                                        {sug.titulo}
+                                                                    </div>
+                                                                    <div className="text-[10px] font-semibold text-slate-500 truncate">
+                                                                        🎤 {sug.artista}
+                                                                    </div>
+                                                                </div>
+                                                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg shrink-0">
+                                                                    Importar
+                                                                </span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* Barra de Ferramentas de Transposição em Tempo Real */}
                                             <div className="flex items-center justify-between flex-wrap gap-2 bg-slate-100/90 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs">

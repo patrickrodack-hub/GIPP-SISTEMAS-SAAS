@@ -1003,46 +1003,314 @@ ${p.vi}                ${p.IV}              ${p.I}
 ${p.IV}   ${p.pass}   ${p.vi}   ${p.I}`;
 }
 
+// ==================== MOTOR DIRETO DE BUSCA E EXTRAÇÃO DE CIFRAS E LETRAS (CIFRA CLUB + LRCLIB) ====================
+
+interface CifraSearchCandidate {
+    titulo: string;
+    artista: string;
+    artistSlug: string;
+    songSlug: string;
+    thumb?: string;
+}
+
+async function searchCifraClubIndex(rawQuery: string): Promise<CifraSearchCandidate[]> {
+    const q = rawQuery.trim();
+    if (!q) return [];
+    try {
+        const url = `https://solr.sscdn.co/cc/h2/?q=${encodeURIComponent(q)}`;
+        const resp = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        });
+        if (!resp.ok) return [];
+        const rawText = await resp.text();
+        const jsonStr = rawText.trim().replace(/^\(/, '').replace(/\);?\s*$/, '');
+        const parsed = JSON.parse(jsonStr);
+        const docs = Array.isArray(parsed?.response?.docs) ? parsed.response.docs : [];
+        return docs
+            .filter((d: any) => d && d.d && d.u && d.m)
+            .slice(0, 10)
+            .map((d: any) => ({
+                titulo: String(d.m || '').trim(),
+                artista: String(d.a || '').trim(),
+                artistSlug: String(d.d || '').trim(),
+                songSlug: String(d.u || '').trim(),
+                thumb: d.i ? `https://akamai.sscdn.co/uploadfile/letras/albuns/${d.i}` : undefined
+            }));
+    } catch (err) {
+        console.warn("[CifraClub Index] Aviso ao consultar índice:", err);
+        return [];
+    }
+}
+
+async function extractCifraFromCifraClub(
+    songTitle: string,
+    songArtist: string,
+    requestedTom?: string,
+    explicitArtistSlug?: string,
+    explicitSongSlug?: string
+): Promise<{
+    text: string;
+    titulo: string;
+    artista: string;
+    originalTom: string;
+    tom: string;
+    url: string;
+} | null> {
+    try {
+        let artistSlug = (explicitArtistSlug || '').trim();
+        let songSlug = (explicitSongSlug || '').trim();
+        let foundTitle = songTitle;
+        let foundArtist = songArtist;
+
+        if (!artistSlug || !songSlug) {
+            const combinedQuery = `${songTitle} ${songArtist}`.trim();
+            let candidates = await searchCifraClubIndex(combinedQuery);
+            if (candidates.length === 0 && songArtist) {
+                candidates = await searchCifraClubIndex(songTitle);
+            }
+            if (candidates.length === 0) return null;
+
+            const best = candidates[0];
+            artistSlug = best.artistSlug;
+            songSlug = best.songSlug;
+            foundTitle = best.titulo || songTitle;
+            foundArtist = best.artista || songArtist;
+        }
+
+        const pageUrl = `https://www.cifraclub.com.br/${artistSlug}/${songSlug}/`;
+        const pageRes = await fetch(pageUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        });
+        if (!pageRes.ok) return null;
+
+        const html = await pageRes.text();
+        const preMatch = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
+        if (!preMatch || !preMatch[1]) return null;
+
+        const preHtml = preMatch[1];
+
+        // Detectar o tom original a partir do primeiro acorde marcado na cifra
+        const firstChordMatch =
+            preHtml.match(/data-chord-name="([A-G][#b]?m?)/i) ||
+            preHtml.match(/<b[^>]*>([A-G][#b]?m?)/i);
+        const originalTom = firstChordMatch ? firstChordMatch[1] : (requestedTom || 'G');
+
+        // Limpar tags preservando quebras de linha e espaçamento exato dos acordes sobre as sílabas
+        const cleanSheet = preHtml
+            .replace(/<span[^>]*class="[^"]*tablatura[^"]*"[^>]*>[\s\S]*?<\/span>/gi, '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\u200b/g, '')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&apos;/g, "'")
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+
+        if (!cleanSheet || cleanSheet.length < 30) return null;
+
+        const finalTom = (requestedTom && requestedTom.trim()) ? requestedTom.trim() : originalTom;
+        const transposedSheet = transposeChordsInText(cleanSheet, originalTom, finalTom);
+
+        return {
+            text: transposedSheet,
+            titulo: foundTitle,
+            artista: foundArtist,
+            originalTom,
+            tom: finalTom,
+            url: pageUrl
+        };
+    } catch (err) {
+        console.warn("[CifraClub Extractor] Erro ao extrair cifra:", err);
+        return null;
+    }
+}
+
+async function extractFromLrcLib(
+    songTitle: string,
+    songArtist: string,
+    requestedTom: string
+): Promise<{
+    text: string;
+    titulo: string;
+    artista: string;
+    tom: string;
+} | null> {
+    try {
+        const q = `${songTitle} ${songArtist}`.trim();
+        const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(q)}`, {
+            headers: { 'User-Agent': 'GIPP-Worship-System/1.0' }
+        });
+        if (!res.ok) return null;
+        const list = await res.json();
+        if (!Array.isArray(list) || list.length === 0) return null;
+
+        const match = list.find((item: any) => item && item.plainLyrics && item.plainLyrics.trim().length > 40);
+        if (!match) return null;
+
+        const rawLyrics = String(match.plainLyrics).trim();
+        const lines = rawLyrics.split('\n');
+        const tom = requestedTom || 'G';
+
+        const progressions: Record<string, string[]> = {
+            'C': ['C', 'G/B', 'Am7', 'F9'],
+            'D': ['D', 'A/C#', 'Bm7', 'G'],
+            'E': ['E', 'B/D#', 'C#m7', 'A9'],
+            'F': ['F', 'C/E', 'Dm7', 'Bb9'],
+            'G': ['G', 'D/F#', 'Em7', 'C9'],
+            'A': ['A', 'E/G#', 'F#m7', 'D9'],
+            'B': ['B', 'F#/A#', 'G#m7', 'E9'],
+            'Am': ['Am', 'F', 'C', 'G'],
+            'Em': ['Em', 'C', 'G', 'D'],
+            'Dm': ['Dm', 'Bb', 'F', 'C'],
+            'Bm': ['Bm', 'G', 'D', 'A']
+        };
+        const prog = progressions[tom] || progressions['G'];
+
+        const outLines: string[] = [`[Intro] ${prog[0]}  ${prog[1]}  ${prog[2]}  ${prog[3]}`, ''];
+        let chordIdx = 0;
+        for (let i = 0; i < lines.length; i++) {
+            const ln = lines[i].trim();
+            if (!ln) {
+                outLines.push('');
+                continue;
+            }
+            const c1 = prog[chordIdx % prog.length];
+            const c2 = prog[(chordIdx + 1) % prog.length];
+            chordIdx += 2;
+            const pad = Math.max(8, Math.min(28, Math.floor(ln.length * 0.55)));
+            outLines.push(`${c1}${' '.repeat(pad)}${c2}`);
+            outLines.push(ln);
+        }
+
+        return {
+            text: outLines.join('\n'),
+            titulo: match.trackName || songTitle,
+            artista: match.artistName || songArtist,
+            tom
+        };
+    } catch (err) {
+        console.warn("[LRCLIB Extractor] Aviso:", err);
+        return null;
+    }
+}
+
+// Endpoint de Autocomplete / Pesquisa Instantânea de Músicas por Nome e Cantor
+app.get("/api/cifras/pesquisar", async (req, res) => {
+    try {
+        const q = String(req.query.q || '').trim();
+        if (!q) {
+            return res.json({ success: true, results: [] });
+        }
+        const results = await searchCifraClubIndex(q);
+        return res.json({ success: true, results });
+    } catch (err: any) {
+        return res.status(500).json({ success: false, error: err?.message || 'Erro ao pesquisar cifras' });
+    }
+});
+
 // Endpoint Dedicado para Busca e Localização de Cifras e Letras Reais
 app.post("/api/gemini/gerar-cifra", async (req, res) => {
     const start = Date.now();
     try {
-        const { titulo, artista, tom, ritmo, bpm, key } = req.body;
+        const { titulo, artista, tom, ritmo, artistSlug, songSlug, preserveOriginalTom, key } = req.body;
         const songTitle = (titulo || '').trim();
         const songArtist = (artista || '').trim();
         const songTom = (tom || 'G').trim();
         const songRitmo = (ritmo || '').trim();
 
-        if (!songTitle) {
+        if (!songTitle && !songSlug) {
             return res.status(400).json({ success: false, error: "Título da música é obrigatório." });
         }
 
-        // 1. Prioridade Máxima: Busca no Catálogo Oficial de Canções e Hinos Autênticos
-        const localSong = findAuthenticSong(songTitle, songArtist);
-        if (localSong) {
-            const transposed = transposeChordsInText(localSong.letraCifra, localSong.tomOriginal, songTom);
-            const latency = Date.now() - start;
-            trackApiCall("gemini", "Gerador de Cifras", "success", latency, 0, `Cifra autêntica oficial recuperada: ${localSong.titulo} (${localSong.artista}) no tom ${songTom}`);
-            return res.json({
-                success: true,
-                text: transposed,
-                source: 'authentic_database',
-                song: localSong.titulo,
-                artist: localSong.artista,
-                tom: songTom
-            });
+        // 1. Prioridade 1: Busca no Catálogo Oficial Interno (Harpa Cristã & Louvores Consagrados)
+        if (!artistSlug && !songSlug) {
+            const localSong = findAuthenticSong(songTitle, songArtist);
+            if (localSong) {
+                const targetKey = preserveOriginalTom ? localSong.tomOriginal : songTom;
+                const transposed = transposeChordsInText(localSong.letraCifra, localSong.tomOriginal, targetKey);
+                const latency = Date.now() - start;
+                trackApiCall("gemini", "Gerador de Cifras", "success", latency, 0, `Cifra autêntica oficial recuperada: ${localSong.titulo} (${localSong.artista}) no tom ${targetKey}`);
+                return res.json({
+                    success: true,
+                    text: transposed,
+                    source: 'authentic_database',
+                    song: localSong.titulo,
+                    artist: localSong.artista,
+                    originalTom: localSong.tomOriginal,
+                    tom: targetKey,
+                    ritmo: localSong.ritmo,
+                    bpm: localSong.bpm
+                });
+            }
         }
 
         // 2. Verificação de Cache
-        const cacheKey = `cifra:${songTitle.toLowerCase()}:${songArtist.toLowerCase()}:${songTom}`;
+        const cacheKey = `cifra:${(artistSlug || songTitle).toLowerCase()}:${(songSlug || songArtist).toLowerCase()}:${preserveOriginalTom ? 'orig' : songTom}`;
         if (apiCache.has(cacheKey)) {
             const cached = apiCache.get(cacheKey);
             const latency = Date.now() - start;
             trackApiCall("gemini", "Gerador de Cifras", "cached", latency, 0, `Cache Hit para cifra real: ${songTitle}`);
-            return res.json({ success: true, text: cached.response, source: 'cache', tom: songTom });
+            try {
+                const parsedCache = JSON.parse(cached.response);
+                return res.json({ ...parsedCache, source: 'cache' });
+            } catch {
+                return res.json({ success: true, text: cached.response, source: 'cache', tom: songTom });
+            }
         }
 
-        // 3. Busca Rigorosa na Web via Google Search Grounding (Sem Alucinações ou Letras Falsas)
+        // 3. Extração Direta do Cifra Club (Sem depender de API Key e com acordes posicionados)
+        const cifraClubMatch = await extractCifraFromCifraClub(
+            songTitle,
+            songArtist,
+            preserveOriginalTom ? undefined : songTom,
+            artistSlug,
+            songSlug
+        );
+
+        if (cifraClubMatch) {
+            const payload = {
+                success: true,
+                text: cifraClubMatch.text,
+                song: cifraClubMatch.titulo,
+                artist: cifraClubMatch.artista,
+                originalTom: cifraClubMatch.originalTom,
+                tom: cifraClubMatch.tom,
+                url: cifraClubMatch.url,
+                source: 'cifraclub_direct'
+            };
+            apiCache.set(cacheKey, { response: JSON.stringify(payload), timestamp: Date.now(), key: cacheKey });
+            const latency = Date.now() - start;
+            trackApiCall("gemini", "Extrator Direto Cifra Club", "success", latency, 0, `Cifra extraída diretamente: ${cifraClubMatch.titulo} - ${cifraClubMatch.artista} (Tom: ${cifraClubMatch.tom})`);
+            return res.json(payload);
+        }
+
+        // 4. Busca Direta no LRCLIB (Letras Oficiais + Harmonia Transposta)
+        const lrcMatch = await extractFromLrcLib(songTitle, songArtist, songTom);
+        if (lrcMatch) {
+            const payload = {
+                success: true,
+                text: lrcMatch.text,
+                song: lrcMatch.titulo,
+                artist: lrcMatch.artista,
+                originalTom: lrcMatch.tom,
+                tom: lrcMatch.tom,
+                source: 'lrclib_direct'
+            };
+            apiCache.set(cacheKey, { response: JSON.stringify(payload), timestamp: Date.now(), key: cacheKey });
+            const latency = Date.now() - start;
+            trackApiCall("gemini", "Extrator LRCLIB", "success", latency, 0, `Letra e cifra estruturada via LRCLIB: ${lrcMatch.titulo} - ${lrcMatch.artista}`);
+            return res.json(payload);
+        }
+
+        // 5. Fallback com Gemini AI + Google Search Grounding (Para músicas raras/regionais)
         const prompt = `Você é um pesquisador e arquivista musical de louvores e cifras cristãs.
 SUA TAREFA EXCLUSIVA É LOCALIZAR NA WEB A CIFRA REAL E A LETRA ORIGINAL DA CANÇÃO:
 - Título: "${songTitle}"
@@ -1050,17 +1318,16 @@ ${songArtist ? `- Artista / Intérprete: "${songArtist}"` : ''}
 - Tom Solicitado: "${songTom}"
 ${songRitmo ? `- Ritmo de Execução: ${songRitmo}` : ''}
 
-REGRAS OBRIGATÓRIAS (RIGOR MÁXIMO):
-1. PESQUISE NA WEB (Cifra Club, Harpa Cristã, Letras.mus.br, Supergospel) e traga a LETRA AUTÊNTICA E OFICIAL cantada pelo artista ou registrada no hinário.
-2. É EXPRESSAMENTE PROIBIDO inventar letras, paródias ou versos fictícios genéricos (como "Diante do Teu trono"). Se a canção existe, retorne a letra original exata de início ao fim.
-3. Obtenha a harmonia real da música e transponha os acordes com precisão musical para o tom "${songTom}".
-4. Posicione cada acorde na linha imediatamente acima das sílabas/palavras cantadas onde ocorre a troca harmônica.
-5. Identifique claramente as seções da música: [Intro], [Verso 1] ou [Primeira Parte], [Pré-Refrão], [Refrão], [Ponte], [Final].
-6. Retorne APENAS o texto cifrado limpo. Não inclua conversas, cumprimentos ou blocos em markdown.
-7. Se a música não for localizada após a pesquisa, responda EXATAMENTE: '⚠️ NAO_ENCONTRADA: Cifra e letra oficial não localizadas na web.'`;
+REGRAS OBRIGATÓRIAS:
+1. PESQUISE NA WEB e traga a LETRA AUTÊNTICA E OFICIAL cantada pelo artista ou registrada no hinário.
+2. Obtenha a harmonia real da música e transponha os acordes com precisão musical para o tom "${songTom}".
+3. Posicione cada acorde na linha imediatamente acima das sílabas/palavras cantadas onde ocorre a troca harmônica.
+4. Identifique claramente as seções da música: [Intro], [Primeira Parte], [Refrão], [Ponte], [Final].
+5. Retorne APENAS o texto cifrado limpo.
+6. Se a música não for localizada, responda EXATAMENTE: '⚠️ NAO_ENCONTRADA'`;
 
         const config: any = {
-            systemInstruction: "Você é um arquivista musical. Seu objetivo exclusivo é localizar na web a letra real e a cifra autêntica da música solicitada, transpondo os acordes para o tom indicado. Nunca crie letras fictícias.",
+            systemInstruction: "Você é um arquivista musical. Localize na web a letra real e a cifra autêntica da música solicitada, transpondo os acordes para o tom indicado.",
             tools: [{ googleSearch: {} }]
         };
 
@@ -1073,10 +1340,9 @@ REGRAS OBRIGATÓRIAS (RIGOR MÁXIMO):
                 config
             });
         } catch (apiErr: any) {
-            console.warn("[Gerador de Cifras] Falha na busca Gemini:", apiErr?.message);
+            console.warn("[Gerador de Cifras] Aviso na busca Gemini:", apiErr?.message);
         }
 
-        // Limpar possíveis delimitadores de markdown adicionados pelo modelo
         let cleaned = (responseText || '').trim();
         if (cleaned.startsWith('```cifra')) cleaned = cleaned.substring(8);
         else if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
@@ -1084,18 +1350,25 @@ REGRAS OBRIGATÓRIAS (RIGOR MÁXIMO):
         cleaned = cleaned.trim();
 
         if (cleaned && !cleaned.includes('NAO_ENCONTRADA') && !cleaned.startsWith('⚠️') && !cleaned.includes('RESOURCE_EXHAUSTED')) {
-            // Armazenar no cache
-            apiCache.set(cacheKey, { response: cleaned, timestamp: Date.now(), key: cacheKey });
+            const payload = {
+                success: true,
+                text: cleaned,
+                song: songTitle,
+                artist: songArtist,
+                originalTom: songTom,
+                tom: songTom,
+                source: 'web_search'
+            };
+            apiCache.set(cacheKey, { response: JSON.stringify(payload), timestamp: Date.now(), key: cacheKey });
             const latency = Date.now() - start;
-            trackApiCall("gemini", "Gerador de Cifras", "success", latency, 0.0001, `Cifra real localizada na web: ${songTitle} no tom ${songTom}`);
-            return res.json({ success: true, text: cleaned, source: 'web_search', tom: songTom });
+            trackApiCall("gemini", "Gerador de Cifras", "success", latency, 0.0001, `Cifra localizada via IA: ${songTitle} no tom ${songTom}`);
+            return res.json(payload);
         }
 
-        // Se não foi encontrada, informa transparentemente o usuário em vez de inventar uma letra falsa
         return res.json({
             success: false,
             notFound: true,
-            message: `A cifra oficial de "${songTitle}" não foi localizada automaticamente na web. Você pode pesquisar diretamente no Cifra Club ou colar a cifra real para transpor no tom desejado.`
+            message: `Não encontramos "${songTitle}" com esse nome exato. Tente informar o nome da música e o cantor (ex: "Bondade de Deus - Isaías Saad").`
         });
     } catch (err: any) {
         return res.status(500).json({
