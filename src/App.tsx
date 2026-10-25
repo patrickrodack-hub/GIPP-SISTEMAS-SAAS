@@ -3359,6 +3359,7 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
     const fileInputRef = useRef(null);
     const [tempMember, setTempMember] = useState({ id: '', funcao: '' });
     const [loadingAiPlan, setLoadingAiPlan] = useState(false);
+    const [loadingEbdOnline, setLoadingEbdOnline] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     // Crescimento Eclesiástico States
@@ -4500,28 +4501,340 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                         <FormSelect label="Turma" value={data.turma_id} onChange={v=>setData({...data, turma_id:v})} options={db.ebd.turmas.map(t=>({label:t.nome, value:t.id}))} required/>
                     </div>
                 );
-            case 'ebd_licao':
+            case 'ebd_licao': {
+                const rawCombined = String(data.licao_numero || '').trim();
+                const matchCombined = rawCombined.match(/^(?:LI[CÇ][AÃ]O\s*)?(\d{1,2})(?:\s*[-–:]\s*(.*))?$/i);
+                const resolvedNumeroLicao = data.numero_licao || (matchCombined ? matchCombined[1] : '1');
+                const resolvedTituloLicao = data.titulo_licao !== undefined
+                    ? data.titulo_licao
+                    : (data.tema || (matchCombined && matchCombined[2] ? matchCombined[2] : ''));
+
+                const syncEbdLessonFields = (patch: Record<string, any>) => {
+                    const nextNum = patch.numero_licao !== undefined ? patch.numero_licao : resolvedNumeroLicao;
+                    const nextTitle = patch.titulo_licao !== undefined ? patch.titulo_licao : resolvedTituloLicao;
+                    const formattedCombined = nextTitle && String(nextTitle).trim()
+                        ? `Lição ${nextNum} - ${String(nextTitle).trim()}`
+                        : `Lição ${nextNum}`;
+                    setData({
+                        ...data,
+                        ...patch,
+                        numero_licao: String(nextNum),
+                        titulo_licao: nextTitle,
+                        tema: nextTitle,
+                        licao_numero: formattedCombined
+                    });
+                };
+
+                const handleSearchEbdLessonMetadataOnline = async () => {
+                    const revQuery = String(data.revista || '').trim();
+                    const subQuery = String(data.subtitulo || '').trim();
+                    const titQuery = String(resolvedTituloLicao || '').trim();
+                    if (!revQuery && !titQuery) {
+                        addToast("Informe ao menos o Título da Revista ou o Título da Lição para buscar os dados online.", "warning");
+                        return;
+                    }
+                    setLoadingEbdOnline(true);
+                    try {
+                        const turmaNome = db.ebd?.turmas?.find((t: any) => t.id === data.turma_id)?.nome || 'Adultos';
+                        const res = await fetch('/api/ebd/pesquisar-revista', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                revista: revQuery || titQuery,
+                                temaCentral: subQuery,
+                                licaoNum: resolvedNumeroLicao,
+                                tituloLicao: titQuery,
+                                editora: data.editora || 'CPAD',
+                                autor: data.autor || '',
+                                trimestre: data.trimestre || '1º Trimestre 2026',
+                                publico: turmaNome
+                            })
+                        });
+                        if (res.ok) {
+                            const json = await res.json();
+                            const mag = json?.primaryMagazine;
+                            if (mag) {
+                                const numInt = parseInt(String(resolvedNumeroLicao), 10) || 1;
+                                const matchedLesson = Array.isArray(mag.licoes)
+                                    ? (mag.licoes.find((l: any) => Number(l.num) === numInt) || mag.licoes[0])
+                                    : null;
+                                const nextTitle = titQuery || matchedLesson?.titulo || '';
+                                const formattedCombined = nextTitle
+                                    ? `Lição ${resolvedNumeroLicao} - ${nextTitle}`
+                                    : `Lição ${resolvedNumeroLicao}`;
+
+                                setData((prev: any) => ({
+                                    ...prev,
+                                    revista: prev.revista || mag.titulo || '',
+                                    subtitulo: prev.subtitulo || mag.subtitulo || '',
+                                    editora: prev.editora || mag.editora || 'CPAD',
+                                    autor: prev.autor || mag.comentarista || '',
+                                    trimestre: prev.trimestre || mag.trimestre || '1º Trimestre 2026',
+                                    numero_licao: String(resolvedNumeroLicao),
+                                    titulo_licao: nextTitle,
+                                    tema: nextTitle,
+                                    licao_numero: formattedCombined,
+                                    leitura_biblica: prev.leitura_biblica || matchedLesson?.leitura || '',
+                                    texto_aureo: prev.texto_aureo || matchedLesson?.aureo || '',
+                                    verdade_pratica: prev.verdade_pratica || matchedLesson?.verdade || '',
+                                    capa: prev.capa || mag.capa || null
+                                }));
+                                addToast("Dados da revista, subsídios da lição e capa sincronizados com sucesso!", "success");
+                            } else {
+                                addToast("Nenhuma correspondência online encontrada. Você pode preencher manualmente ou importar a capa do computador.", "info");
+                            }
+                        } else {
+                            addToast("Não foi possível consultar o catálogo online no momento.", "warning");
+                        }
+                    } catch (err) {
+                        console.warn("[EBD Lookup Online]", err);
+                        addToast("Erro ao buscar dados online. Verifique sua conexão ou importe a capa do computador.", "warning");
+                    } finally {
+                        setLoadingEbdOnline(false);
+                    }
+                };
+
                 return (
-                    <div className="grid grid-cols-1 gap-4">
-                        <FormInput label="Data da Lição" type="date" value={data.data} onChange={v=>setData({...data, data:v})} required/>
-                        <FormSelect label="Turma" value={data.turma_id} onChange={v=>setData({...data, turma_id:v})} options={db.ebd.turmas.map(t=>({label:t.nome, value:t.id}))} required/>
-                        <FormInput label="Revista / Tema Central" value={data.revista} onChange={v=>setData({...data, revista:v})} required/>
-                        <div className="grid grid-cols-2 gap-4"><FormInput label="Nº / Título da Lição" type="text" value={data.licao_numero} onChange={v=>setData({...data, licao_numero:v})} placeholder="Ex: 1 - A Criação" /><FormInput label="Qtd. Presentes" type="number" value={data.qtd_presentes} onChange={v=>setData({...data, qtd_presentes:v})} /></div>
-                        <div className="mt-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Capa da Revista (Opcional)</label>
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-24 bg-white rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden relative group shadow-sm shrink-0">
-                                    {data.capa ? <img src={data.capa} className="w-full h-full object-cover" /> : <BookOpen size={24} className="text-slate-300"/>}
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><label className="cursor-pointer text-white text-[10px] font-bold uppercase tracking-widest text-center w-full h-full flex items-center justify-center">Upload<input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa')} /></label></div>
+                    <div className="space-y-4 max-h-[72vh] overflow-y-auto pr-1.5 custom-scrollbar text-left">
+                        {/* BLOCO 1: DADOS EDITORIAIS DA REVISTA, TRIMESTRE & TURMA */}
+                        <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200/70">
+                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                    <BookOpen size={15} className="text-emerald-600" /> 1. Dados da Revista, Trimestre & Turma
+                                </h4>
+                                <button
+                                    type="button"
+                                    onClick={handleSearchEbdLessonMetadataOnline}
+                                    disabled={loadingEbdOnline}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                                >
+                                    {loadingEbdOnline ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
+                                    {loadingEbdOnline ? 'Buscando Online...' : 'Buscar Dados & Capa Online'}
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <FormInput
+                                    label="Título da Revista / Tema Central"
+                                    value={data.revista || ''}
+                                    onChange={v => setData({ ...data, revista: v })}
+                                    required
+                                    placeholder="Ex: O ESPÍRITO SANTO E OS DONS ESPIRITUAIS"
+                                    className="!mb-0"
+                                />
+                                <FormInput
+                                    label="Subtítulo da Revista"
+                                    value={data.subtitulo || ''}
+                                    onChange={v => setData({ ...data, subtitulo: v })}
+                                    placeholder="Ex: A PROMESSA, O PODER E A ATUALIDADE DO PENTECOSTES"
+                                    className="!mb-0"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <FormSelect
+                                    label="Trimestre"
+                                    value={data.trimestre || '1º Trimestre 2026'}
+                                    onChange={v => setData({ ...data, trimestre: v })}
+                                    options={[
+                                        '1º Trimestre 2026',
+                                        '2º Trimestre 2026',
+                                        '3º Trimestre 2026',
+                                        '4º Trimestre 2026',
+                                        '1º Trimestre 2025',
+                                        '2º Trimestre 2025',
+                                        '3º Trimestre 2025',
+                                        '4º Trimestre 2025',
+                                        'Currículo Anual / Especial'
+                                    ]}
+                                    required
+                                    className="!mb-0"
+                                />
+                                <FormSelect
+                                    label="Turma / Classe EBD"
+                                    value={data.turma_id || ''}
+                                    onChange={v => setData({ ...data, turma_id: v })}
+                                    options={db.ebd.turmas.map(t => ({ label: t.nome, value: t.id }))}
+                                    required
+                                    className="!mb-0"
+                                />
+                                <FormSelect
+                                    label="Editora"
+                                    value={data.editora || 'CPAD'}
+                                    onChange={v => setData({ ...data, editora: v })}
+                                    options={[
+                                        { label: 'CPAD (Assembleias de Deus)', value: 'CPAD' },
+                                        { label: 'Editora Betel', value: 'Editora Betel' },
+                                        { label: 'Editora Central Gospel', value: 'Central Gospel' },
+                                        { label: 'Editora Cristã Evangélica', value: 'Cristã Evangélica' },
+                                        { label: 'Currículo Próprio / Outra', value: 'Currículo Próprio' }
+                                    ]}
+                                    required
+                                    className="!mb-0"
+                                />
+                            </div>
+
+                            <FormInput
+                                label="Autor / Comentarista da Revista (Opcional)"
+                                value={data.autor || ''}
+                                onChange={v => setData({ ...data, autor: v })}
+                                placeholder="Ex: PR. ELIENAI CABRAL, PR. ESEQUIAS SOARES, PR. JOSÉ GONÇALVES..."
+                                className="!mb-0"
+                            />
+                        </div>
+
+                        {/* BLOCO 2: DADOS DA LIÇÃO, DATA E SUBSÍDIOS DE ESTUDO */}
+                        <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 space-y-3">
+                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider pb-2 border-b border-slate-200/70 flex items-center gap-2">
+                                <BookOpenText size={15} className="text-indigo-600" /> 2. Identificação da Lição, Data & Subsídios Bíblicos
+                            </h4>
+
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                <div className="md:col-span-4">
+                                    <FormSelect
+                                        label="Número da Lição"
+                                        value={String(resolvedNumeroLicao)}
+                                        onChange={v => syncEbdLessonFields({ numero_licao: v })}
+                                        options={Array.from({ length: 14 }, (_, i) => ({
+                                            label: `Lição ${i + 1}`,
+                                            value: String(i + 1)
+                                        }))}
+                                        required
+                                        className="!mb-0"
+                                    />
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Carregue a imagem da capa da revista para evitar bloqueios de segurança da editora (CORS) e garantir a exibição perfeita para os alunos.</p>
-                                    {data.capa && <button type="button" onClick={() => setData({...data, capa: null})} className="text-[10px] font-bold text-rose-500 mt-2 hover:text-rose-700 transition-colors uppercase tracking-wider">Remover Imagem</button>}
+                                <div className="md:col-span-8">
+                                    <FormInput
+                                        label="Título da Lição"
+                                        type="text"
+                                        value={resolvedTituloLicao}
+                                        onChange={v => syncEbdLessonFields({ titulo_licao: v })}
+                                        required
+                                        placeholder="Ex: A CRIAÇÃO DOS CÉUS E DA TERRA"
+                                        className="!mb-0"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <FormInput
+                                    label="Data da Lição (Aula)"
+                                    type="date"
+                                    value={data.data || ''}
+                                    onChange={v => setData({ ...data, data: v })}
+                                    required
+                                    className="!mb-0"
+                                />
+                                <FormInput
+                                    label="Qtd. Presentes na Aula"
+                                    type="number"
+                                    value={data.qtd_presentes ?? ''}
+                                    onChange={v => setData({ ...data, qtd_presentes: v })}
+                                    placeholder="Ex: 25"
+                                    className="!mb-0"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <FormInput
+                                    label="Leitura Bíblica em Classe (Opcional)"
+                                    type="text"
+                                    value={data.leitura_biblica || ''}
+                                    onChange={v => setData({ ...data, leitura_biblica: v })}
+                                    placeholder="Ex: GÊNESIS 1:1-27; ATOS 2:1-13"
+                                    className="!mb-0"
+                                />
+                                <FormInput
+                                    label="Texto Áureo da Lição (Opcional)"
+                                    type="text"
+                                    value={data.texto_aureo || ''}
+                                    onChange={v => setData({ ...data, texto_aureo: v })}
+                                    placeholder="Ex: NO PRINCÍPIO CRIOU DEUS OS CÉUS E A TERRA (GN 1:1)"
+                                    className="!mb-0"
+                                />
+                            </div>
+                        </div>
+
+                        {/* BLOCO 3: IMAGEM DA CAPA DA LIÇÃO / REVISTA (ONLINE OU IMPORTAR DO COMPUTADOR) */}
+                        <div className="p-4 bg-slate-50/80 border border-slate-200/90 rounded-2xl space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                    <ImageIcon size={15} className="text-emerald-600" /> 3. Imagem da Capa da Lição / Revista
+                                </label>
+                                {data.capa && (
+                                    <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                                        <CheckCircle size={12} /> Capa Carregada
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                                {/* Preview da Capa */}
+                                <div className="w-24 h-32 bg-white rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center overflow-hidden relative group shadow-xs shrink-0">
+                                    {data.capa ? (
+                                        <img src={data.capa} alt="Capa da Revista EBD" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center p-2 text-center text-slate-400">
+                                            <BookOpen size={26} className="text-slate-300 mb-1" />
+                                            <span className="text-[9px] font-bold uppercase leading-tight">Sem Capa</span>
+                                        </div>
+                                    )}
+                                    <label className="absolute inset-0 bg-slate-900/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white text-[10px] font-bold uppercase tracking-wider p-2 text-center">
+                                        <UploadCloud size={18} className="mb-1" />
+                                        Trocar Imagem
+                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa')} />
+                                    </label>
+                                </div>
+
+                                {/* Ações de Importação do Computador ou Busca Online */}
+                                <div className="flex-1 w-full space-y-2.5">
+                                    <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                                        Caso a capa da revista ou lição não seja encontrada online, importe a imagem diretamente do seu computador ou celular para garantir exibição fiel para toda a turma.
+                                    </p>
+
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <label className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-xs transition">
+                                            <UploadCloud size={15} />
+                                            Importar Capa do Computador
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa')} />
+                                        </label>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleSearchEbdLessonMetadataOnline}
+                                            disabled={loadingEbdOnline}
+                                            className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+                                        >
+                                            {loadingEbdOnline ? <Loader2 size={14} className="animate-spin text-emerald-600" /> : <Search size={14} className="text-emerald-600" />}
+                                            Buscar Capa Online
+                                        </button>
+
+                                        {data.capa && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setData({ ...data, capa: null })}
+                                                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 transition cursor-pointer"
+                                            >
+                                                <Trash2 size={13} /> Remover
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="pt-1">
+                                        <input
+                                            type="url"
+                                            value={data.capa && String(data.capa).startsWith('http') ? data.capa : ''}
+                                            onChange={e => setData({ ...data, capa: e.target.value.trim() || null })}
+                                            placeholder="Ou cole aqui o link (URL) direto da imagem da capa..."
+                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 );
+            }
             case 'missionario':
                 return (
                     <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar text-left">
@@ -4965,8 +5278,8 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
             onClose={onClose}
             icon={themeInfo.icon}
             headerBg={themeInfo.bg}
-            defaultWidth={670}
-            defaultHeight={670}
+            defaultWidth={type === 'ebd_licao' ? 760 : 670}
+            defaultHeight={type === 'ebd_licao' ? 750 : 670}
             footer={
                 <>
                     <Button variant="ghost" onClick={onClose} disabled={isSaving} className="border border-white/60 bg-white/40 hover:bg-white cursor-pointer">Cancelar</Button>

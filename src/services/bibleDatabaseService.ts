@@ -20,16 +20,10 @@ import {
   findBibleBook, 
   parseBiblicalReference 
 } from '../data/bibliaOfflineData';
-import rawBibleData from '../data/biblia_arc.json';
+import { getRawBibleArcBooks, RawBookJson } from '../data/bibliaArcCompressed';
 import { getExactChapterVerseCount } from '../data/bibleCanonicalVerseCounts';
 
-interface RawBookJson {
-  abbrev: string;
-  name: string;
-  chapters: string[][];
-}
-
-const RAW_ARC_BOOKS: RawBookJson[] = rawBibleData as unknown as RawBookJson[];
+const RAW_ARC_BOOKS: RawBookJson[] = getRawBibleArcBooks();
 
 const RAW_ARC_MAP = new Map<string, RawBookJson>();
 RAW_ARC_BOOKS.forEach(b => {

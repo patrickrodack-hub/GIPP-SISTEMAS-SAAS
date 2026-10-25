@@ -10,7 +10,7 @@
  * 4. Versículos clássicos pré-categorizados para momentos litúrgicos do culto
  */
 
-import rawBibleData from './biblia_arc.json';
+import { getRawBibleArcBooks, RawBookJson } from './bibliaArcCompressed';
 import { getExactChapterVerseCount } from './bibleCanonicalVerseCounts';
 
 export interface BibleBookInfo {
@@ -492,13 +492,7 @@ export function parseBiblicalReference(query: string): ParsedBibleRef | null {
   return null;
 }
 
-interface RawBookJson {
-  abbrev: string;
-  name: string;
-  chapters: string[][];
-}
-
-const RAW_ARC_BOOKS: RawBookJson[] = rawBibleData as unknown as RawBookJson[];
+const RAW_ARC_BOOKS: RawBookJson[] = getRawBibleArcBooks();
 
 const RAW_ARC_MAP = new Map<string, RawBookJson>();
 RAW_ARC_BOOKS.forEach(b => {
@@ -556,6 +550,83 @@ export function getOfflineVerseText(bookName: string, chapter: number, verse: nu
     reference: `${bookName} ${chapter}:${verse}`,
     text: `Palavra do Senhor em ${bookName} ${chapter}:${verse} (Almeida Revista e Corrigida).`
   };
+}
+
+/**
+ * Extrai uma passagem bíblica completa (intervalo de versículos ou múltiplas referências separadas por ';')
+ * diretamente da base canônica Almeida Revista e Corrigida (ARC - 31.102 versículos).
+ */
+export function getFormattedBiblePassageARC(refQuery: string, maxVerses = 16): string {
+  if (!refQuery || !refQuery.trim()) return '';
+  const segments = refQuery.split(';').map(s => s.trim()).filter(Boolean);
+  const collectedLines: string[] = [];
+  let lastBookName = '';
+  let totalVerses = 0;
+
+  for (const seg of segments) {
+    if (totalVerses >= maxVerses) break;
+    // Se o segmento começa apenas com número de capítulo (ex: "6:1-4" após "Efésios 5:22-33")
+    const fullSeg = /^\d+\s*[:.]/.test(seg) && lastBookName ? `${lastBookName} ${seg}` : seg;
+    const match = fullSeg.match(/^([1-3]?\s?[A-Za-zÀ-ÿ\s]+?)\s+(\d+)(?:[\s:,\.](\d+))?(?:\s*[-–a]\s*(\d+))?/i);
+    if (!match) continue;
+
+    const bookCandidate = match[1].trim();
+    const bookInfo = findBibleBook(bookCandidate);
+    if (!bookInfo) continue;
+
+    lastBookName = bookInfo.name;
+    const chapter = Math.min(Math.max(1, parseInt(match[2], 10) || 1), bookInfo.chaptersCount);
+    const rawBook = RAW_ARC_MAP.get(normalizeBibleText(bookInfo.name));
+    const chapterArr = rawBook?.chapters?.[chapter - 1];
+    const maxChVerse = chapterArr ? chapterArr.length : 30;
+
+    const startVerse = match[3] ? Math.max(1, parseInt(match[3], 10)) : 1;
+    const endVerse = match[4]
+      ? Math.min(maxChVerse, Math.max(startVerse, parseInt(match[4], 10)))
+      : (match[3] ? startVerse : Math.min(maxChVerse, startVerse + 9));
+
+    if (segments.length > 1) {
+      collectedLines.push(`[${bookInfo.name} ${chapter}:${startVerse}${endVerse > startVerse ? `-${endVerse}` : ''}]`);
+    }
+
+    for (let v = startVerse; v <= endVerse && totalVerses < maxVerses; v++) {
+      const verseObj = getOfflineVerseText(bookInfo.name, chapter, v);
+      if (verseObj && verseObj.text && !verseObj.text.startsWith('Palavra do Senhor em ')) {
+        collectedLines.push(`${v}. ${verseObj.text}`);
+        totalVerses++;
+      }
+    }
+  }
+
+  return collectedLines.join('\n');
+}
+
+/**
+ * Se o texto informado for apenas uma referência bíblica (ex: "Atos 17:23") ou contiver uma referência no final,
+ * garante que o versículo real da ARC acompanhe a citação.
+ */
+export function resolveSingleVerseQuoteARC(input: string): string {
+  if (!input || !input.trim()) return '';
+  const trimmed = input.trim();
+  // Se já tem texto longo com a citação, retorna como está
+  if (trimmed.length > 40) return trimmed;
+  const parsed = parseBiblicalReference(trimmed.replace(/[()]/g, '').trim());
+  if (parsed) {
+    const startV = parsed.verse || 1;
+    const endV = parsed.endVerse && parsed.endVerse >= startV ? Math.min(parsed.endVerse, startV + 2) : startV;
+    const parts: string[] = [];
+    for (let v = startV; v <= endV; v++) {
+      const item = getOfflineVerseText(parsed.book.name, parsed.chapter, v);
+      if (item && !item.text.startsWith('Palavra do Senhor em ')) {
+        parts.push(item.text);
+      }
+    }
+    if (parts.length > 0) {
+      const refLabel = `${parsed.book.name} ${parsed.chapter}:${startV}${endV > startV ? `-${endV}` : ''}`;
+      return `"${parts.join(' ')}" (${refLabel} - ARC)`;
+    }
+  }
+  return trimmed;
 }
 
 /**

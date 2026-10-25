@@ -13,6 +13,14 @@ import { getFirestore, collectionGroup, getDocs, doc, setDoc, query, limit, setL
 import { PDFDocument } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { findAuthenticSong, transposeChordsInText } from './src/data/christianSongsDatabase';
+import {
+    CATALOGO_OFICIAL_REVISTAS_EBD,
+    resolveDogmaticChapter,
+    build13LessonsForMagazine,
+    buildCompleteEBDLessonMarkdown,
+    ensureCompleteEBDLessonMarkdown
+} from './src/data/ebdCatalogDatabase';
+import { getFormattedBiblePassageARC } from './src/data/bibliaOfflineData';
 
 // Suprime mensagens ruidosas de RestConnection RPC da biblioteca lite no console
 try {
@@ -1590,112 +1598,349 @@ Retorne em formato JSON estruturado:
     }
 });
 
-// ==================== ROTA DE GERAÇÃO INTELIGENTE DE REVISTAS DA EBD (CPAD / CGADB) ====================
+// ==================== MOTOR HÍBRIDO DE BUSCA E GERAÇÃO DE REVISTAS DA EBD (CPAD / BETEL / CGADB) ====================
+
+/**
+ * Busca os versículos completos em Português (João Ferreira de Almeida) na Bible API aberta
+ */
+async function fetchBiblePassageAlmeida(reference: string): Promise<string> {
+    const rawRef = (reference || '').trim();
+    if (!rawRef || rawRef.length < 3) return '';
+    // 1. Prioridade: Base Canônica ARC 100% Local (31.102 versículos autênticos)
+    const localArc = getFormattedBiblePassageARC(rawRef, 16);
+    if (localArc && localArc.trim().length > 20) {
+        return localArc;
+    }
+    // 2. Fallback: API Bíblica Externa
+    const cleanRef = rawRef.split(';')[0].trim();
+    try {
+        const url = `https://bible-api.com/${encodeURIComponent(cleanRef)}?translation=almeida`;
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) return '';
+        const data: any = await resp.json();
+        if (data && Array.isArray(data.verses) && data.verses.length > 0) {
+            return data.verses
+                .map((v: any) => `${v.verse}. ${String(v.text || '').replace(/\s+/g, ' ').trim()}`)
+                .join('\n');
+        }
+        if (data && typeof data.text === 'string' && data.text.trim()) {
+            return data.text.trim();
+        }
+    } catch (err) {
+        // Silencioso caso offline
+    }
+    return '';
+}
+
+/**
+ * Consulta metadados bibliográficos reais de livros e subsídios teológicos (CPAD, Betel, Comentaristas)
+ * usando a API pública do Google Books (sem exigir chave paga)
+ */
+async function fetchEBDSubsidiesFromBooksIndex(params: {
+    revista: string;
+    temaCentral?: string;
+    tituloLicao?: string;
+    editora?: string;
+    autor?: string;
+}): Promise<{ summary: string; coverUrl: string | null; detectedAuthor?: string; detectedPublisher?: string }> {
+    const queryParts = [
+        params.revista,
+        params.temaCentral,
+        params.tituloLicao,
+        params.autor,
+        params.editora || 'CPAD'
+    ].filter(Boolean).join(' ');
+
+    if (!queryParts.trim()) return { summary: '', coverUrl: null };
+
+    try {
+        const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(queryParts)}&langRestrict=pt&maxResults=4`;
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) return { summary: '', coverUrl: null };
+        const data: any = await resp.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        if (items.length === 0) return { summary: '', coverUrl: null };
+
+        const snippets: string[] = [];
+        let coverUrl: string | null = null;
+        let detectedAuthor: string | undefined;
+        let detectedPublisher: string | undefined;
+
+        for (const item of items) {
+            const info = item?.volumeInfo || {};
+            if (!coverUrl && info.imageLinks?.thumbnail) {
+                coverUrl = String(info.imageLinks.thumbnail).replace(/^http:/i, 'https:');
+            }
+            if (!detectedAuthor && Array.isArray(info.authors) && info.authors.length > 0) {
+                detectedAuthor = info.authors.join(', ');
+            }
+            if (!detectedPublisher && info.publisher) {
+                detectedPublisher = info.publisher;
+            }
+            if (info.description && typeof info.description === 'string') {
+                const cleanDesc = info.description.replace(/<[^>]+>/g, '').trim();
+                if (cleanDesc.length > 40) {
+                    snippets.push(`• *${info.title || params.revista}* (${info.authors ? info.authors.join(', ') : (params.autor || params.editora || 'Acervo Teológico')}): ${cleanDesc.slice(0, 380)}${cleanDesc.length > 380 ? '...' : ''}`);
+                }
+            }
+        }
+
+        return {
+            summary: snippets.slice(0, 2).join('\n'),
+            coverUrl,
+            detectedAuthor,
+            detectedPublisher
+        };
+    } catch {
+        return { summary: '', coverUrl: null };
+    }
+}
+
+/**
+ * Rota de Pesquisa e Construção de Revistas e Sumários de 13 Lições da EBD
+ * Busca por: Nome da Revista / Tema Central, Número e Título da Lição, Editora e Autor/Comentarista
+ */
+app.post("/api/ebd/pesquisar-revista", async (req, res) => {
+    const start = Date.now();
+    try {
+        const {
+            revista = '',
+            temaCentral = '',
+            licaoNum = '',
+            tituloLicao = '',
+            editora = 'CPAD',
+            autor = '',
+            publico = 'Adultos',
+            trimestre = '1º Trimestre'
+        } = req.body || {};
+
+        const cleanRevista = String(revista || temaCentral || tituloLicao || 'Fundamentos da Fé Bíblica').trim();
+        const cleanTemaCentral = String(temaCentral || '').trim();
+        const cleanEditora = String(editora || 'CPAD').trim();
+        const cleanAutor = String(autor || '').trim();
+        const cleanLicaoNum = String(licaoNum || '').trim();
+        const cleanTituloLicao = String(tituloLicao || '').trim();
+        const cleanPublico = String(publico || 'Adultos').trim();
+        const cleanTrimestre = String(trimestre || '1º Trimestre').trim();
+
+        const dogmatic = resolveDogmaticChapter(`${cleanRevista} ${cleanTemaCentral} ${cleanTituloLicao}`);
+        const booksMeta = await fetchEBDSubsidiesFromBooksIndex({
+            revista: cleanRevista,
+            temaCentral: cleanTemaCentral,
+            tituloLicao: cleanTituloLicao,
+            editora: cleanEditora,
+            autor: cleanAutor
+        });
+
+        const resolvedAuthor = cleanAutor || booksMeta.detectedAuthor || 'Pr. Elienai Cabral / Corpo Editorial';
+        const resolvedEditora = cleanEditora || booksMeta.detectedPublisher || 'CPAD';
+
+        // Construir a grade completa de 13 lições personalizada para os parâmetros informados
+        const licoes13 = build13LessonsForMagazine({
+            revista: cleanRevista,
+            temaCentral: cleanTemaCentral,
+            editora: resolvedEditora,
+            autor: resolvedAuthor,
+            publico: cleanPublico,
+            licaoEspecificaNum: cleanLicaoNum,
+            licaoEspecificaTitulo: cleanTituloLicao
+        });
+
+        const customMagazine = {
+            id: `ebd-mag-${Date.now()}`,
+            titulo: cleanRevista,
+            subtitulo: cleanTemaCentral || (cleanTituloLicao ? `Foco: Lição ${cleanLicaoNum || '1'} - ${cleanTituloLicao}` : dogmatic.titulo),
+            editora: resolvedEditora,
+            comentarista: resolvedAuthor,
+            publico: cleanPublico === 'todos' ? 'Adultos' : cleanPublico,
+            trimestre: cleanTrimestre === 'todos' ? '1º Trimestre' : cleanTrimestre,
+            declaracaoCap: dogmatic.capitulo,
+            capa: booksMeta.coverUrl || 'https://images.unsplash.com/photo-1504052434569-70ad58565b90?auto=format&fit=crop&w=800&q=80',
+            descricao: booksMeta.summary
+                ? booksMeta.summary.replace(/•\s*\*/g, '').replace(/\*/g, '')
+                : `Revista de Escola Bíblica Dominical (${resolvedEditora}), comentada por ${resolvedAuthor}, estruturada em 13 lições com fundamentação em ${dogmatic.capitulo}.`,
+            licoes: licoes13
+        };
+
+        // Filtrar também revistas do catálogo oficial que tenham relação com a busca
+        const qNorm = `${cleanRevista} ${cleanTemaCentral} ${cleanAutor} ${cleanEditora}`.toLowerCase();
+        const catalogMatches = CATALOGO_OFICIAL_REVISTAS_EBD.filter(m => {
+            const hay = `${m.titulo} ${m.subtitulo} ${m.comentarista} ${m.editora} ${m.declaracaoCap}`.toLowerCase();
+            return cleanRevista.split(/\s+/).some(word => word.length > 2 && hay.includes(word.toLowerCase()));
+        }).map(m => ({
+            ...m,
+            licoes: build13LessonsForMagazine({
+                revista: m.titulo,
+                temaCentral: m.subtitulo,
+                editora: m.editora,
+                autor: m.comentarista,
+                publico: m.publico
+            })
+        }));
+
+        const latency = Date.now() - start;
+        trackApiCall("gemini", "Buscador Híbrido de Revistas EBD", "success", latency, 0, `Revista: ${cleanRevista} (${resolvedEditora} - ${resolvedAuthor})`);
+
+        return res.json({
+            success: true,
+            primaryMagazine: customMagazine,
+            results: [customMagazine, ...catalogMatches.filter(c => c.titulo.toLowerCase() !== customMagazine.titulo.toLowerCase())].slice(0, 6)
+        });
+    } catch (err: any) {
+        return res.status(500).json({
+            success: false,
+            error: "Erro ao pesquisar revista EBD: " + (err?.message || '')
+        });
+    }
+});
+
+// ==================== ROTA DE GERAÇÃO INTELIGENTE DE REVISTAS DA EBD (CPAD / BETEL / CGADB) ====================
 app.post("/api/gemini/gerar-revista-ebd", async (req, res) => {
     const start = Date.now();
     try {
-        const { revista, licaoNum, tema, textoBiblico, faixaEtaria, capaExistente } = req.body;
+        const {
+            revista,
+            temaCentral,
+            subtitulo,
+            trimestre,
+            licaoNum,
+            tema,
+            tituloLicao,
+            dataLicao,
+            editora,
+            autor,
+            textoBiblico,
+            textoAureo,
+            verdadePratica,
+            faixaEtaria,
+            turma,
+            capaExistente,
+            forceRefresh
+        } = req.body || {};
+
         const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
-        const resolvedRevista = revista || "Lições Bíblicas Adultos CPAD";
-        const resolvedLicaoNum = licaoNum || "1";
-        const resolvedTema = tema || "";
-        const resolvedTextoBiblico = textoBiblico || "";
-        const resolvedFaixa = faixaEtaria || "Adultos / Jovens";
+        const resolvedRevista = (revista || temaCentral || "Lições Bíblicas EBD").trim();
+        const resolvedSubtitulo = (subtitulo || temaCentral || "").trim();
+        const resolvedTrimestre = (trimestre || "1º Trimestre").trim();
+        const rawNumStr = String(licaoNum || "1").trim();
+        const matchNum = rawNumStr.match(/^(?:LI[CÇ][AÃ]O\s*)?0*(\d{1,2})(?:\s*[-–:]\s*(.*))?$/i);
+        const resolvedLicaoNum = matchNum ? matchNum[1] : (rawNumStr.replace(/li[cç][aã]o\s*/i, '').trim() || "1");
+        const extractedTitle = matchNum && matchNum[2] ? matchNum[2].trim() : "";
+        const resolvedTema = (tituloLicao || tema || extractedTitle || "").replace(/^(?:LI[CÇ][AÃ]O\s*)?\d{1,2}\s*[-–:]\s*/i, '').trim();
+        const resolvedDataLicao = (dataLicao || "").trim();
+        const resolvedEditora = (editora || "CPAD").trim();
+        const resolvedAutor = (autor || "Comentarista Oficial EBD").trim();
+        const resolvedTextoBiblico = (textoBiblico || "").trim();
+        const resolvedTextoAureo = (textoAureo || "").trim();
+        const resolvedVerdadePratica = (verdadePratica || "").trim();
+        const resolvedFaixa = (turma || faixaEtaria || "Adultos").trim();
 
-        const cacheKey = `ebd_rev:${resolvedRevista}:${resolvedLicaoNum}:${resolvedTema}`;
-        if (apiCache.has(cacheKey)) {
+        const cacheKey = `ebd_rev_v4:${resolvedRevista}:${resolvedSubtitulo}:${resolvedTrimestre}:${resolvedLicaoNum}:${resolvedTema}:${resolvedEditora}:${resolvedAutor}:${resolvedFaixa}:${resolvedTextoBiblico}`;
+        if (!forceRefresh && apiCache.has(cacheKey)) {
             const cached = apiCache.get(cacheKey);
             const latency = Date.now() - start;
-            trackApiCall("gemini", "Gerador Inteligente EBD CPAD", "cached", latency, 0.0000, `Cache Hit! Revista EBD ${resolvedRevista} Lição ${resolvedLicaoNum}`);
+            trackApiCall("gemini", "Gerador Inteligente EBD", "cached", latency, 0.0000, `Cache Hit! Revista EBD ${resolvedRevista} Lição ${resolvedLicaoNum} (${resolvedEditora})`);
             return res.json({
                 success: true,
                 text: cached.response,
                 revista: resolvedRevista,
                 licao: resolvedLicaoNum,
+                editora: resolvedEditora,
+                autor: resolvedAutor,
                 fromCache: true
             });
         }
 
-        const prompt = `Atue como um Professor, Comentarista e Doutor em Teologia da CPAD (Casa Publicadora das Assembleias de Deus) e CGADB.
-Sua missão é gerar a Revista de Estudo Oficial da EBD (Escola Bíblica Dominical) completa para a seguinte aula:
+        // 1. Buscar texto bíblico completo na Bíblia ARC e subsídios bibliográficos
+        const dogmatic = resolveDogmaticChapter(`${resolvedRevista} ${resolvedSubtitulo} ${resolvedTema} ${resolvedTextoBiblico}`);
+        const isAtos17Theme = `${resolvedRevista} ${resolvedSubtitulo} ${resolvedTema}`.toLowerCase().match(/fil[oó]sofo|deus desconhecido|are[oó]pago|atenas|atos 17/);
+        const refToFetch = resolvedTextoBiblico || (isAtos17Theme ? 'Atos 17:22-31' : dogmatic.leituraPadrao);
+        const [bibleVersesText, booksMeta] = await Promise.all([
+            fetchBiblePassageAlmeida(refToFetch),
+            fetchEBDSubsidiesFromBooksIndex({
+                revista: resolvedRevista,
+                temaCentral: resolvedSubtitulo,
+                tituloLicao: resolvedTema,
+                editora: resolvedEditora,
+                autor: resolvedAutor
+            })
+        ]);
 
-- Revista / Trimestre: "${resolvedRevista}"
-- Número da Lição: Lição ${resolvedLicaoNum}
-${resolvedTema ? `- Tema da Aula: "${resolvedTema}"` : ''}
-${resolvedTextoBiblico ? `- Texto Bíblico Base: "${resolvedTextoBiblico}"` : ''}
-- Faixa Etária / Público: ${resolvedFaixa}
+        const finalAutor = (resolvedAutor && resolvedAutor !== 'Comentarista Oficial EBD')
+            ? resolvedAutor
+            : (booksMeta.detectedAuthor || 'Pr. Elienai Cabral / Corpo Editorial CPAD');
 
-DIRETRIZES FUNDAMENTAIS:
-1. PESQUISA NA WEB / CPAD: Busque as informações mais compatíveis com o tema oficial das Lições Bíblicas da CPAD e os 24 Capítulos da Declaração de Fé da CGADB / CPAD.
-2. ESTRUTURAÇÃO OBRIGATÓRIA:
-   - # 1. Título do Módulo e Tema Oficial da Lição
-   - # 2. Introdução (Visão geral, contexto histórico e doutrinário)
-   - **Texto Áureo:** Citação bíblica exata (versão Almeida Revista e Corrigida - ARC).
-   - **Verdade Prática:** A declaração prática oficial do comentarista da CPAD.
-   - **Leitura Bíblica em Classe:** O texto bíblico principal da lição lido versículo a versículo.
-   - # 3. Fundamentação Doutrinária: Conexão direta com um dos 24 Capítulos da Declaração de Fé da CGADB (ex: Cap. 1 Bibliologia, Cap. 2-3 Teontologia/Trindade, Cap. 4-5 Cristologia, Cap. 6 Pneumatologia, Cap. 10 Soteriologia, Cap. 19-20 Distintivos Pentecostais, Cap. 21 Cura Divina, Cap. 22-23 Escatologia, Cap. 24 Família).
-   - # 4. Referências Bíblicas e Exegese dos Tópicos (Tópico I, Tópico II e Tópico III com rica exegese, termos em hebraico/grego explicados e versículos bíblicos comentados).
-   - # 5. Aplicação Prática (Diretrizes práticas para o crente, professor e liderança no cotidiano e na igreja local).
-   - # 6. Validação: 2 perguntas de fixação para os alunos no final com o Gabarito Teológico Comentado.
-${!capaExistente ? '3. No final da resposta, sugira uma URL de capa oficial no formato URL_CAPA=[url_da_imagem] ou URL_CAPA=null se não encontrar.' : ''}
+        const buildParams = {
+            revista: resolvedRevista,
+            temaCentral: resolvedSubtitulo,
+            subtitulo: resolvedSubtitulo,
+            trimestre: resolvedTrimestre,
+            licaoNum: resolvedLicaoNum,
+            tituloLicao: resolvedTema,
+            dataLicao: resolvedDataLicao,
+            editora: resolvedEditora,
+            autor: finalAutor,
+            faixaEtaria: resolvedFaixa,
+            turma: resolvedFaixa,
+            textoBiblico: refToFetch,
+            textoBiblicoIntegral: bibleVersesText,
+            textoAureo: resolvedTextoAureo,
+            verdadePratica: resolvedVerdadePratica,
+            subsidiosWeb: booksMeta.summary
+        };
 
-Retorne o texto formatado em Markdown com alta elegância, reverência teológica e profundidade didática.`;
-
-        const buildFallbackLessonText = () => `# 1. ${resolvedRevista} - Lição ${resolvedLicaoNum}: ${resolvedTema || 'Fundamentos da Fé e Prática Cristã'}
-
-# 2. Introdução
-O estudo sistemático da Palavra de Deus na Escola Bíblica Dominical constitui o alicerce pedagógico e doutrinário que molda a vida cristã e sustenta a igreja local na sã doutrina.
-
-**Texto Áureo:**
-"Lâmpada para os meus pés é tua palavra, e luz para o meu caminho." (Salmos 119:105 - ARC)
-
-**Verdade Prática:**
-O estudo contínuo das Sagradas Escrituras ilumina nosso entendimento, preserva a pureza da fé pentecostal e capacita a família para o testemunho cristão no mundo.
-
-**Leitura Bíblica em Classe:**
-${resolvedTextoBiblico || '2 Timóteo 3:14-17; Hebreus 4:12'}
-14 Tu, porém, permanece naquilo que aprendeste, e de que foste inteirado, sabendo de quem o tens aprendido,
-15 E que desde a tua meninice sabes as sagradas Letras, que podem fazer-te sábio para a salvação, pela fé que há em Cristo Jesus.
-16 Toda a Escritura é divinamente inspirada, e proveitosa para ensinar, para redargüir, para corrigir, para instruir em justiça;
-17 Para que o homem de Deus seja perfeito, e perfeitamente instruído para toda a boa obra.
-
-# 3. Fundamentação Doutrinária
-Conforme preconizado no **Capítulo 1 da Declaração de Fé das Assembleias de Deus (CGADB/CPAD)** - *Sobre as Sagradas Escrituras*, cremos na inspiração verbal e plenária da Bíblia Sagrada como a única regra infalível de fé e conduta para a Igreja de Cristo.
-
-# 4. Referências Bíblicas e Exegese dos Tópicos
-
-## I - A Revelação Divina e a Autoridade da Palavra
-A Bíblia não apenas contém a Palavra de Deus, mas é em sua totalidade a revelação inspirada pelo Espírito Santo (*theopneustos* - 2 Tm 3:16). Ela transcende épocas e culturas, mantendo sua eficácia transformadora inalterada.
-
-## II - A Aplicação dos Preceitos na Vida Diária
-O conhecimento doutrinário deve traduzir-se em piedade prática (*eusebeia*). A sã doutrina combate o relativismo moderno e fortalece a vida devocional, a oração e o jejum.
-
-## III - O Testemunho Pentecostal e o Poder Espiritual
-O Espírito Santo capacita a Igreja para o cumprimento da Grande Comissão com sinais, prodígios e dons espirituais em plena vigência (Atos 1:8; 1 Coríntios 12:7-11).
-
-# 5. Aplicação Prática
-1. Dedique tempo diário à meditação bíblica e oração fervorosa.
-2. Transmita o ensino bíblico com fidelidade e amor aos seus alunos e familiares.
-3. Viva de modo santo e irrepreensível na sociedade, demonstrando o fruto do Espírito.
-
-# 6. Validação (Perguntas de Fixação)
-**Questão 1:** O que significa a inspiração plenária e verbal das Sagradas Escrituras?
-*Gabarito Comentado:* Significa que cada palavra e o conjunto total dos textos canônicos foram inspirados pelo Espírito Santo aos autores bíblicos originais, sendo totalmente fidedignos e isentos de erro em sua mensagem redentora.
-
-**Questão 2:** Como a Verdade Bíblica deve refletir-se no testemunho da família cristã?
-*Gabarito Comentado:* Reflete-se mediante a submissão a Cristo, o amor sacrificial no lar, a instrução dos filhos no temor do Senhor e a retidão moral diante da sociedade.`;
+        // 2. Construtor Teológico Determinístico Completo (Funciona 100% sem precisar de chave paga)
+        const buildRichDeterministicMagazine = () => buildCompleteEBDLessonMarkdown(buildParams);
 
         if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey.trim() === "") {
+            const generatedText = buildRichDeterministicMagazine();
+            apiCache.set(cacheKey, { response: generatedText, timestamp: Date.now(), key: cacheKey });
             return res.json({
                 success: true,
-                text: buildFallbackLessonText(),
+                text: generatedText,
                 revista: resolvedRevista,
                 licao: resolvedLicaoNum,
+                editora: resolvedEditora,
+                autor: finalAutor,
+                capa: booksMeta.coverUrl || null,
                 fromCache: false,
-                isFallback: true
+                source: 'motor_teologico_hibrido'
             });
         }
+
+        const prompt = `Atue como Professor, Comentarista e Doutor em Teologia da ${resolvedEditora} e CGADB (estilo homilético e exegético de ${finalAutor}).
+Sua missão é gerar a Revista de Estudo Oficial da EBD (Escola Bíblica Dominical) COMPLETA, DENSA, DINÂMICA E PROFISSIONAL, sem resumir tópicos, utilizando RIGOROSAMENTE os dados informados abaixo:
+
+DADOS OFICIAIS DA REVISTA E DA LIÇÃO (NÃO DIVERGIR EM NENHUM CAMPO):
+- Título da Revista: "${resolvedRevista}"
+- Subtítulo da Revista: "${resolvedSubtitulo || dogmatic.titulo}"
+- Trimestre: "${resolvedTrimestre}"
+- Turma / Classe: "${resolvedFaixa}"
+- Editora: "${resolvedEditora}"
+- Autor / Comentarista: "${finalAutor}"
+- Número da Lição: Lição ${resolvedLicaoNum}
+- Título da Lição: "${resolvedTema || `${resolvedRevista} - Lição ${resolvedLicaoNum}`}"
+${resolvedDataLicao ? `- Data da Lição: "${resolvedDataLicao}"` : ''}
+- Leitura Bíblica em Classe: "${refToFetch}"
+${bibleVersesText ? `- Versículos da Leitura em Classe (ARC): \n${bibleVersesText}` : ''}
+${resolvedTextoAureo ? `- Texto Áureo Informado: "${resolvedTextoAureo}"` : ''}
+${resolvedVerdadePratica ? `- Verdade Prática Informada: "${resolvedVerdadePratica}"` : ''}
+
+DIRETRIZES OBRIGATÓRIAS:
+1. PROIBIDO RESUMIR EM APENAS TÓPICOS CURTOS: Para CADA Tópico (I, II e III) e CADA Subtópico (1.1, 1.2, 1.3 / 2.1, 2.2, 2.3 / 3.1, 3.2, 3.3), escreva múltiplos parágrafos densos de estudo bíblico, exegese versículo a versículo, análise histórica/cultural, explicação de termos em hebraico/grego, citações bíblicas completas na versão ARC e aplicação prática para a turma de ${resolvedFaixa}.
+2. ESTRUTURAÇÃO OBRIGATÓRIA EM 7 SEÇÕES MARKDOWN:
+   - # Lição ${resolvedLicaoNum}: ${resolvedTema || resolvedRevista} (com a **Ficha Editorial da Revista** completa)
+   - # 2. Introdução (com **Texto Áureo:**, **Verdade Prática:**, **Leitura Bíblica em Classe:** com todos os versículos numerados, e **Contextualização Histórica, Bíblica e Editorial da Lição:**)
+   - # 3. Fundamentação Doutrinária (alinhamento com ${dogmatic.capitulo} dos 24 Capítulos da Declaração de Fé da CGADB/CPAD e exegese léxica)
+   - # 4. Referências Bíblicas e Exegese dos Tópicos:
+     - ## I — [Título do Tópico I] (com introdução do tópico, referências bíblicas e subtópicos ### 1.1, ### 1.2, ### 1.3 desenvolvidos com múltiplos parágrafos e versículos transcritos)
+     - ## II — [Título do Tópico II] (com introdução do tópico, referências bíblicas e subtópicos ### 2.1, ### 2.2, ### 2.3 desenvolvidos com múltiplos parágrafos e versículos transcritos)
+     - ## III — [Título do Tópico III] (com introdução do tópico, referências bíblicas e subtópicos ### 3.1, ### 3.2, ### 3.3 desenvolvidos com múltiplos parágrafos e versículos transcritos)
+   - # 5. Aplicação Prática (diretrizes para o devocional, família e igreja local)
+   - # 6. Conclusão (síntese pastoral inspiradora)
+   - # 7. Validação (Perguntas de Fixação) (2 questões profundas com *Gabarito Teológico Comentado:*)
+${!capaExistente ? '3. No final da resposta, sugira uma URL de capa oficial no formato URL_CAPA=[url_da_imagem] ou URL_CAPA=null se não encontrar.' : ''}`;
 
         try {
             const responseText = await callGeminiWithFallback({
@@ -1703,35 +1948,46 @@ O Espírito Santo capacita a Igreja para o cumprimento da Grande Comissão com s
                 customKey: apiKey,
                 model: "gemini-3.8-flash",
                 config: {
-                    systemInstruction: "Você é um Comentarista Oficial das Lições Bíblicas CPAD e Professor de Teologia da CGADB. Gere o material didático completo com a máxima erudição e fidelidade dogmática.",
+                    systemInstruction: `Você é o Comentarista Oficial (${finalAutor}) das Lições Bíblicas (${resolvedEditora}) e Professor Doutor em Teologia da CGADB. Gere o material de estudo completo e extenso para cada tópico e subtópico, 100% fiel aos dados informados pelo usuário.`,
                     tools: [{ googleSearch: {} }]
                 }
             });
 
-            apiCache.set(cacheKey, { response: responseText, timestamp: Date.now(), key: cacheKey });
+            if (responseText && !responseText.startsWith('⚠️') && !responseText.includes('RESOURCE_EXHAUSTED')) {
+                const verifiedText = ensureCompleteEBDLessonMarkdown(responseText, buildParams);
+                apiCache.set(cacheKey, { response: verifiedText, timestamp: Date.now(), key: cacheKey });
+                const latency = Date.now() - start;
+                trackApiCall("gemini", "Gerador Inteligente EBD", "success", latency, 0.0008, `Revista: ${resolvedRevista}, Lição: ${resolvedLicaoNum} (${resolvedEditora} - ${finalAutor})`);
 
-            const latency = Date.now() - start;
-            trackApiCall("gemini", "Gerador Inteligente EBD CPAD", "success", latency, 0.0008, `Revista: ${resolvedRevista}, Lição: ${resolvedLicaoNum}`);
-
-            return res.json({
-                success: true,
-                text: responseText,
-                revista: resolvedRevista,
-                licao: resolvedLicaoNum,
-                fromCache: false
-            });
+                return res.json({
+                    success: true,
+                    text: verifiedText,
+                    revista: resolvedRevista,
+                    licao: resolvedLicaoNum,
+                    editora: resolvedEditora,
+                    autor: finalAutor,
+                    capa: booksMeta.coverUrl || null,
+                    fromCache: false,
+                    source: 'gemini_web_grounding'
+                });
+            }
         } catch (aiErr: any) {
-            console.warn("[Gemini API] Cota atingida ou indisponibilidade temporária ao gerar revista EBD; servindo apostila canônica offline CPAD:", formatGeminiUserError(aiErr));
-            const fallbackText = buildFallbackLessonText();
-            return res.json({
-                success: true,
-                text: fallbackText,
-                revista: resolvedRevista,
-                licao: resolvedLicaoNum,
-                fromCache: false,
-                isFallback: true
-            });
+            console.warn("[Gemini API] Usando Motor Teológico Híbrido para Revista EBD:", formatGeminiUserError(aiErr));
         }
+
+        const fallbackText = buildRichDeterministicMagazine();
+        apiCache.set(cacheKey, { response: fallbackText, timestamp: Date.now(), key: cacheKey });
+        return res.json({
+            success: true,
+            text: fallbackText,
+            revista: resolvedRevista,
+            licao: resolvedLicaoNum,
+            editora: resolvedEditora,
+            autor: finalAutor,
+            capa: booksMeta.coverUrl || null,
+            fromCache: false,
+            source: 'motor_teologico_hibrido'
+        });
     } catch (error: any) {
         console.warn("[Gemini API] Aviso ao processar revista EBD:", formatGeminiUserError(error));
         res.status(200).json({ success: false, error: formatGeminiUserError(error) });

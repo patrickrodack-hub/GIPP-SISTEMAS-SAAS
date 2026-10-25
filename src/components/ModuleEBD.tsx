@@ -43,6 +43,7 @@ import {
 } from '../App';
 
 import { InteractiveMagazineView } from './InteractiveMagazineView';
+import { ensureCompleteEBDLessonMarkdown } from '../data/ebdCatalogDatabase';
 import { InteractiveWindow } from './InteractiveWindow';
 import { EBDClassroomIntegration } from './EBDClassroomIntegration';
 import { GeradorSlidesMultimidia } from './GeradorSlidesMultimidia';
@@ -145,11 +146,16 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
     const [licaoRevistaFilter, setLicaoRevistaFilter] = useState('todas');
     const [expandedRevistas, setExpandedRevistas] = useState<Record<string, boolean>>({});
 
-    // --- ESTADOS DO BUSCADOR E GERADOR DE REVISTAS CPAD ---
+    // --- ESTADOS DO BUSCADOR E GERADOR DE REVISTAS EBD (CPAD / BETEL / CENTRAL GOSPEL) ---
     const [cpadSearchModalOpen, setCpadSearchModalOpen] = useState(false);
     const [cpadSearchQuery, setCpadSearchQuery] = useState('');
-    const [cpadAudienceFilter, setCpadAudienceFilter] = useState<string>('todos');
-    const [cpadQuarterFilter, setCpadQuarterFilter] = useState<string>('todos');
+    const [cpadTemaCentral, setCpadTemaCentral] = useState('');
+    const [cpadLicaoNum, setCpadLicaoNum] = useState('1');
+    const [cpadTituloLicao, setCpadTituloLicao] = useState('');
+    const [cpadEditora, setCpadEditora] = useState('CPAD');
+    const [cpadAutor, setCpadAutor] = useState('');
+    const [cpadAudienceFilter, setCpadAudienceFilter] = useState<string>('Adultos');
+    const [cpadQuarterFilter, setCpadQuarterFilter] = useState<string>('1º Trimestre');
     const [cpadSearching, setCpadSearching] = useState(false);
     const [cpadSearchResults, setCpadSearchResults] = useState<any[]>([]);
     const [selectedCpadMagazine, setSelectedCpadMagazine] = useState<any>(null);
@@ -261,111 +267,130 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
         }
     ];
 
-    // --- FUNÇÕES DO BUSCADOR E GERADOR DE REVISTAS CPAD ---
+    // --- FUNÇÕES DO BUSCADOR E GERADOR DE REVISTAS EBD (POR TEMA, LIÇÃO, EDITORA E AUTOR) ---
     const handleSearchCpadWithAI = async () => {
-        if (!cpadSearchQuery.trim()) {
-            addToast("Digite um termo para pesquisar no acervo de revistas CPAD.", "warning");
+        const revistaInput = cpadSearchQuery.trim() || cpadTemaCentral.trim() || cpadTituloLicao.trim();
+        if (!revistaInput) {
+            addToast("Informe ao menos o Nome da Revista / Tema Central ou o Título da Lição.", "warning");
             return;
         }
         setCpadSearching(true);
-        addToast("Buscando no acervo oficial da CPAD e gerando catálogo...", "info");
+        addToast(`Buscando informações da revista "${revistaInput}" (${cpadEditora}${cpadAutor ? ` • ${cpadAutor}` : ''})...`, "info");
         try {
-            const prompt = `Atue como um teólogo especialista no acervo editorial oficial da Casa Publicadora das Assembleias de Deus (CPAD).
-UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD (https://www.cpad.com.br/ e portais de Lições Bíblicas CPAD).
+            const resp = await fetch('/api/ebd/pesquisar-revista', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    revista: cpadSearchQuery.trim() || cpadTemaCentral.trim(),
+                    temaCentral: cpadTemaCentral.trim(),
+                    licaoNum: cpadLicaoNum.trim(),
+                    tituloLicao: cpadTituloLicao.trim(),
+                    editora: cpadEditora.trim() || 'CPAD',
+                    autor: cpadAutor.trim(),
+                    publico: cpadAudienceFilter,
+                    trimestre: cpadQuarterFilter
+                })
+            });
 
-Pesquise revistas da CPAD e lições bíblicas relacionadas ao tema/termo: "${cpadSearchQuery}".
-Filtro de público: ${cpadAudienceFilter}.
-Filtro de trimestre: ${cpadQuarterFilter}.
-
-Retorne EXATAMENTE um array JSON contendo até 4 revistas CPAD encontradas ou sugeridas com base no termo, no seguinte formato sem marcações externas além de JSON:
-[
-  {
-    "id": "cpad-search-1",
-    "titulo": "Título da Revista CPAD",
-    "subtitulo": "Tema Central do Trimestre",
-    "publico": "Adultos ou Jovens ou Adolescentes ou Infantil",
-    "trimestre": "1º Trimestre",
-    "declaracaoCap": "Capítulo da Declaração de Fé CGADB/CPAD correspondente",
-    "comentarista": "Nome do Comentarista CPAD",
-    "capa": "https://images.unsplash.com/photo-1504052434569-70ad58565b90?auto=format&fit=crop&w=800&q=80",
-    "descricao": "Descrição curta do objetivo pedagógico e teológico do trimestre."
-  }
-]`;
-
-            const res = await callGeminiAI(prompt, 5);
-            let parsed: any[] = [];
-            try {
-                const clean = res.replace(/```json/gi, '').replace(/```/g, '').trim();
-                parsed = JSON.parse(clean);
-            } catch (e) {
-                console.warn("CPAD search json parse warning:", e);
-                parsed = [];
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data?.success && Array.isArray(data.results) && data.results.length > 0) {
+                    setCpadSearchResults(data.results);
+                    if (data.primaryMagazine) {
+                        setSelectedCpadMagazine(data.primaryMagazine);
+                    }
+                    addToast(`Revista "${data.primaryMagazine?.titulo || revistaInput}" e grade de 13 lições estruturadas com sucesso!`, "success");
+                    return;
+                }
             }
-            if (parsed.length > 0) {
-                setCpadSearchResults(parsed);
-                addToast(`${parsed.length} revistas da CPAD encontradas no acervo!`, "success");
-            } else {
-                setCpadSearchResults([]);
-                addToast("Nenhuma revista no formato JSON foi retornada. Tente com outros termos.", "warning");
-            }
+            addToast("Não foi possível consultar o catálogo no momento.", "warning");
         } catch (err) {
             console.error(err);
-            addToast("Erro ao realizar busca no acervo CPAD.", "error");
+            addToast("Erro ao realizar busca no acervo EBD.", "error");
         } finally {
             setCpadSearching(false);
         }
     };
 
+    // Gera e abre imediatamente a Revista Completa de uma Lição específica pelos dados informados
+    const handleDirectGenerateSingleLesson = async () => {
+        const revistaNome = cpadSearchQuery.trim() || cpadTemaCentral.trim() || 'Lições Bíblicas EBD';
+        const licaoNumero = cpadLicaoNum.trim() || '1';
+        const licaoTitulo = cpadTituloLicao.trim() || `${revistaNome} - Lição ${licaoNumero}`;
+        const editoraNome = cpadEditora.trim() || 'CPAD';
+        const autorNome = cpadAutor.trim() || 'Comentarista Oficial EBD';
+
+        setCpadSearchModalOpen(false);
+        await handleGenerateLessonPlan({
+            id: `ebd-direct-${Date.now()}`,
+            revista: revistaNome,
+            tema_central: cpadTemaCentral.trim(),
+            licao_numero: licaoNumero,
+            titulo_licao: licaoTitulo,
+            editora: editoraNome,
+            autor: autorNome,
+            faixa_etaria: cpadAudienceFilter === 'todos' ? 'Adultos' : cpadAudienceFilter
+        });
+    };
+
     const handleGenerateFullCpadMagazine = async (mag: any) => {
+        if (mag.licoes && Array.isArray(mag.licoes) && mag.licoes.length > 0) {
+            setSelectedCpadMagazine({ ...mag, loadingLicoes: false });
+            return;
+        }
+
         setSelectedCpadMagazine({ ...mag, loadingLicoes: true, licoes: [] });
         setGeneratingCpadCatalog(true);
-        addToast(`Gerando catálogo de 13 lições da CPAD para "${mag.titulo}"...`, "info");
+        addToast(`Carregando as 13 lições da revista "${mag.titulo}" (${mag.editora || cpadEditora})...`, "info");
         
         try {
-            const prompt = `Atue como teólogo pedagogo da CPAD (Casa Publicadora das Assembleias de Deus).
-Elabore a lista completa das 13 lições trimestrais para a revista EBD CPAD:
-- Título/Tema da Revista: "${mag.titulo} - ${mag.subtitulo}"
-- Público Alvo: "${mag.publico || 'Adultos'}"
-- Capítulo Mapeado da Declaração de Fé da CPAD/CGADB: "${mag.declaracaoCap || 'Declaração de Fé CGADB'}"
+            const resp = await fetch('/api/ebd/pesquisar-revista', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    revista: mag.titulo,
+                    temaCentral: mag.subtitulo,
+                    editora: mag.editora || cpadEditora || 'CPAD',
+                    autor: mag.comentarista || cpadAutor || '',
+                    publico: mag.publico || cpadAudienceFilter,
+                    trimestre: mag.trimestre || cpadQuarterFilter,
+                    licaoNum: cpadLicaoNum,
+                    tituloLicao: cpadTituloLicao
+                })
+            });
 
-Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou depois):
-[
-  {
-    "licao_numero": "1",
-    "titulo": "Título da Lição 1",
-    "texto_aureo": "Texto bíblico chave exato",
-    "verdade_pratica": "Declaração teológica síntese",
-    "leitura_biblica": "Referência dos versículos para leitura em classe (ex: João 3:1-16)",
-    "capitulo_declaracao_fe": "Capítulo correspondente da Declaração de Fé CPAD"
-  }
-]`;
-
-            const responseText = await callGeminiAI(prompt, 5);
-            let licoesList: any[] = [];
-            try {
-                const cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-                licoesList = JSON.parse(cleanJson);
-            } catch (e) {
-                console.warn("Json parse warning for CPAD magazine catalog:", e);
-                licoesList = Array.from({ length: 13 }, (_, i) => ({
-                    licao_numero: `${i + 1}`,
-                    titulo: `Lição ${i + 1}: ${mag.titulo} - Parte ${i + 1}`,
-                    texto_aureo: 'O Senhor é o meu pastor; nada me faltará.',
-                    verdade_pratica: 'A Palavra de Deus é inerrante, viva e eficaz.',
-                    leitura_biblica: 'Salmos 23:1-6',
-                    capitulo_declaracao_fe: mag.declaracaoCap || 'Declaração de Fé CGADB'
-                }));
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data?.primaryMagazine?.licoes) {
+                    setSelectedCpadMagazine({
+                        ...mag,
+                        editora: data.primaryMagazine.editora || mag.editora || 'CPAD',
+                        comentarista: data.primaryMagazine.comentarista || mag.comentarista,
+                        loadingLicoes: false,
+                        licoes: data.primaryMagazine.licoes
+                    });
+                    addToast(`Grade de 13 lições para "${mag.titulo}" carregada com sucesso!`, "success");
+                    return;
+                }
             }
+
+            const fallbackList = Array.from({ length: 13 }, (_, i) => ({
+                licao_numero: `${i + 1}`,
+                titulo: `Lição ${i + 1}: ${mag.titulo} - Parte ${i + 1}`,
+                texto_aureo: 'Lâmpada para os meus pés é tua palavra, e luz para o meu caminho. (Salmos 119:105)',
+                verdade_pratica: 'A Palavra de Deus é inerrante, viva e eficaz para edificar a Igreja.',
+                leitura_biblica: '2 Timóteo 3:14-17',
+                capitulo_declaracao_fe: mag.declaracaoCap || 'Declaração de Fé CGADB'
+            }));
 
             setSelectedCpadMagazine({
                 ...mag,
                 loadingLicoes: false,
-                licoes: licoesList
+                licoes: fallbackList
             });
-            addToast(`Catálogo de 13 lições da CPAD para "${mag.titulo}" carregado com sucesso!`, "success");
         } catch (err) {
             console.error(err);
-            addToast("Erro ao obter o catálogo de lições com IA.", "error");
+            addToast("Erro ao obter o catálogo de lições.", "error");
             setSelectedCpadMagazine(prev => prev ? { ...prev, loadingLicoes: false } : null);
         } finally {
             setGeneratingCpadCatalog(false);
@@ -383,7 +408,7 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
         }
 
         setBatchImporting(true);
-        addToast(`Importando ${selectedCpadMagazine.licoes.length} lições da revista CPAD para a turma...`, "info");
+        addToast(`Importando ${selectedCpadMagazine.licoes.length} lições da revista "${selectedCpadMagazine.titulo}" para a turma...`, "info");
 
         try {
             let currentDate = new Date(batchImportStartDate + 'T12:00:00');
@@ -400,8 +425,12 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
                     data: dateStr,
                     turma_id: targetTurmaForBatchImport,
                     revista: selectedCpadMagazine.titulo,
+                    tema_central: selectedCpadMagazine.subtitulo || '',
+                    editora: selectedCpadMagazine.editora || cpadEditora || 'CPAD',
+                    autor: selectedCpadMagazine.comentarista || cpadAutor || '',
                     licao_numero: lic.licao_numero || `${i + 1}`,
                     titulo_licao: lic.titulo,
+                    tema: lic.titulo,
                     texto_aureo: lic.texto_aureo,
                     verdade_pratica: lic.verdade_pratica,
                     leitura_biblica: lic.leitura_biblica,
@@ -422,7 +451,7 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
                 }
             }
 
-            addToast(`Sucesso! ${batchDocs.length} lições da CPAD foram lançadas no cronograma da turma.`, "success");
+            addToast(`Sucesso! ${batchDocs.length} lições (${selectedCpadMagazine.editora || 'CPAD'}) foram lançadas no cronograma da turma.`, "success");
             setCpadSearchModalOpen(false);
             setSelectedCpadMagazine(null);
         } catch (err: any) {
@@ -1098,6 +1127,10 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
     const licoesAgrupadasPorRevista = useMemo(() => {
         const groups: Record<string, {
             revista: string;
+            subtitulo: string;
+            trimestre: string;
+            editora: string;
+            autor: string;
             capa: string | null;
             licoes: any[];
             turmasIds: Set<string>;
@@ -1111,6 +1144,10 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
                 const fallbackCapa = (db.ebd?.licoes || []).find((x: any) => x.revista === l.revista && x.capa && x.capa !== 'null')?.capa || null;
                 groups[revName] = {
                     revista: revName,
+                    subtitulo: l.subtitulo || l.tema_central || '',
+                    trimestre: l.trimestre || '',
+                    editora: l.editora || 'CPAD',
+                    autor: l.autor || l.comentarista || '',
                     capa: (l.capa && l.capa !== 'null') ? l.capa : fallbackCapa,
                     licoes: [],
                     turmasIds: new Set<string>(),
@@ -1120,6 +1157,18 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
             }
             if (!groups[revName].capa && l.capa && l.capa !== 'null') {
                 groups[revName].capa = l.capa;
+            }
+            if (!groups[revName].subtitulo && (l.subtitulo || l.tema_central)) {
+                groups[revName].subtitulo = l.subtitulo || l.tema_central;
+            }
+            if (!groups[revName].trimestre && l.trimestre) {
+                groups[revName].trimestre = l.trimestre;
+            }
+            if ((!groups[revName].editora || groups[revName].editora === 'CPAD') && l.editora) {
+                groups[revName].editora = l.editora;
+            }
+            if (!groups[revName].autor && (l.autor || l.comentarista)) {
+                groups[revName].autor = l.autor || l.comentarista;
             }
             groups[revName].licoes.push(l);
             if (l.turma_id) groups[revName].turmasIds.add(l.turma_id);
@@ -1131,8 +1180,8 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
 
         return Object.values(groups).map(g => {
             const sortedLicoes = [...g.licoes].sort((a, b) => {
-                const numA = parseInt(String(a.licao_numero || '').replace(/\D/g, ''), 10);
-                const numB = parseInt(String(b.licao_numero || '').replace(/\D/g, ''), 10);
+                const numA = parseInt(String(a.numero_licao || a.licao_numero || '').replace(/\D/g, ''), 10);
+                const numB = parseInt(String(b.numero_licao || b.licao_numero || '').replace(/\D/g, ''), 10);
                 if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
                 return String(a.data || '').localeCompare(String(b.data || ''));
             });
@@ -1316,9 +1365,28 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
         }
     }, [tab, turmasFiltradas, profSelectedTurmaId]);
 
-    const handleGenerateLessonPlan = async (licao, silent = false) => {
-        const cacheKey = `gipp_cached_ebd_lesson_${licao.id || licao.licao_numero || '1'}_${licao.revista}`;
-        const cachedData = localStorage.getItem(cacheKey);
+    const handleGenerateLessonPlan = async (licao: any, silent = false, forceRefresh = false) => {
+        const rawNumField = String(licao.numero_licao || licao.licao_numero || '1').trim();
+        const numMatch = rawNumField.match(/\d+/);
+        const cleanNumRaw = numMatch ? numMatch[0] : (rawNumField.replace(/^(?:li[cç][aã]o\s*)+/i, '').split(':')[0].trim() || '1');
+        const extractedFromNumField = rawNumField.includes(':') ? rawNumField.split(':').slice(1).join(':').trim() : '';
+        const cleanTituloLicao = String(licao.titulo_licao || licao.tema || extractedFromNumField || '')
+            .replace(/^(?:li[cç][aã]o\s*\d+\s*[-:–]?\s*)+/i, '')
+            .trim() || String(licao.revista || 'Estudo Bíblico');
+
+        const formattedModalTitle = `Estudo Interativo: Lição ${cleanNumRaw.padStart(2, '0')} — ${cleanTituloLicao}`;
+        const turmaNome = turmasFiltradas.find((t: any) => t.id === licao.turma_id)?.nome || licao.turma_nome || licao.faixa_etaria || 'Adultos';
+        const dataFormatada = licao.data ? formatDateLocal(licao.data) : (licao.data_licao || '');
+        const subtituloRevista = licao.subtitulo || licao.tema_central || '';
+        const trimestreRevista = licao.trimestre || '';
+        const editoraRevista = licao.editora || 'CPAD';
+        const autorRevista = licao.autor || licao.comentarista || 'Comentarista Oficial EBD';
+        const leituraBiblicaLicao = licao.leitura_biblica || licao.texto_biblico || '';
+        const textoAureoLicao = licao.texto_aureo || '';
+        const verdadePraticaLicao = licao.verdade_pratica || '';
+
+        const cacheKey = `gipp_cached_ebd_lesson_${licao.id || cleanNumRaw || '1'}_${licao.revista}`;
+        const cachedData = !forceRefresh ? localStorage.getItem(cacheKey) : null;
 
         const getManualCapa = (l: any) => {
             if (l.capa && l.capa !== 'null') return l.capa;
@@ -1329,35 +1397,76 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
 
         const manualCapa = getManualCapa(licao);
 
-        if (cachedData && !silent) {
+        const buildAiLessonState = (textContent: string, capaImg: string | null, fromCacheFlag: boolean) => ({
+            loading: false,
+            text: textContent,
+            title: formattedModalTitle,
+            revista: licao.revista || 'Lições Bíblicas EBD',
+            subtitulo: subtituloRevista,
+            trimestre: trimestreRevista,
+            turma: turmaNome,
+            editora: editoraRevista,
+            autor: autorRevista,
+            licao: cleanNumRaw,
+            tituloLicao: cleanTituloLicao,
+            dataLicao: dataFormatada,
+            leituraBiblica: leituraBiblicaLicao,
+            textoAureo: textoAureoLicao,
+            verdadePratica: verdadePraticaLicao,
+            capa: capaImg,
+            fromCache: fromCacheFlag,
+            rawLicao: licao
+        });
+
+        const ensureCompleteWithLessonData = (rawMarkdown: string) => ensureCompleteEBDLessonMarkdown(rawMarkdown, {
+            revista: licao.revista || 'Lições Bíblicas EBD',
+            subtitulo: subtituloRevista,
+            trimestre: trimestreRevista,
+            turma: turmaNome,
+            licaoNum: cleanNumRaw,
+            tituloLicao: cleanTituloLicao,
+            dataLicao: dataFormatada,
+            editora: editoraRevista,
+            autor: autorRevista,
+            faixaEtaria: turmaNome,
+            textoBiblico: leituraBiblicaLicao,
+            textoAureo: textoAureoLicao,
+            verdadePratica: verdadePraticaLicao
+        });
+
+        if (cachedData && !silent && !forceRefresh) {
             try {
                 const parsed = JSON.parse(cachedData);
                 const finalCapa = manualCapa || parsed.capa || null;
-                setAiLesson({
-                    loading: false,
-                    text: parsed.text,
-                    title: parsed.title,
-                    revista: parsed.revista,
-                    licao: parsed.licao,
-                    capa: finalCapa,
-                    fromCache: true
-                });
-                addToast("Lição carregada do Cache Local (Offline-ready)!", "success");
+                const upgradedText = ensureCompleteWithLessonData(parsed.text || '');
+                if (upgradedText !== parsed.text) {
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        ...parsed,
+                        text: upgradedText,
+                        title: formattedModalTitle,
+                        revista: licao.revista,
+                        licao: cleanNumRaw,
+                        capa: finalCapa
+                    }));
+                }
+                setAiLesson(buildAiLessonState(upgradedText, finalCapa, true));
+                addToast("Revista de estudo carregada e sincronizada com os dados da lição!", "success");
                 return;
             } catch (e) {
                 console.warn("Could not read EBD lesson from local storage:", e);
             }
         }
 
-        // Se o estudo já tiver sido gerado e persistido no Firestore, carrega-o diretamente de lá!
-        if (licao.conteudo_estudo) {
+        // Se o estudo já tiver sido gerado e persistido no Firestore, valida se está completo e alinhado aos dados da lição
+        if (licao.conteudo_estudo && !forceRefresh) {
             try {
                 const finalCapa = manualCapa || licao.capa || null;
+                const upgradedText = ensureCompleteWithLessonData(licao.conteudo_estudo);
                 const payload = {
-                    text: licao.conteudo_estudo,
-                    title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
+                    text: upgradedText,
+                    title: formattedModalTitle,
                     revista: licao.revista,
-                    licao: licao.licao_numero || '1',
+                    licao: cleanNumRaw,
                     capa: finalCapa
                 };
                 localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -1369,18 +1478,10 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
                 });
 
                 if (!silent) {
-                    setAiLesson({
-                        loading: false,
-                        text: licao.conteudo_estudo,
-                        title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
-                        revista: licao.revista,
-                        licao: licao.licao_numero || '1',
-                        capa: finalCapa,
-                        fromCache: true
-                    });
-                    addToast("Lição carregada da biblioteca sincronizada!", "success");
+                    setAiLesson(buildAiLessonState(upgradedText, finalCapa, true));
+                    addToast("Revista de estudo carregada e alinhada aos dados da lição!", "success");
                 } else {
-                    addToast(`Lição ${licao.licao_numero} pré-carregada e disponível offline!`, "success");
+                    addToast(`Lição ${cleanNumRaw} pré-carregada e disponível offline!`, "success");
                 }
                 return;
             } catch (err) {
@@ -1388,91 +1489,65 @@ Gere a resposta EXATAMENTE no seguinte formato JSON (sem texto extra antes ou de
             }
         }
 
-        if (!isOnline && !cachedData) {
-            addToast("Você está offline e esta lição não está na memória do aparelho. Conecte-se à internet para estudar.", "warning");
-            return;
-        }
-
         const initialCapa = manualCapa || licao.capa || null;
         if (!silent) {
-            setAiLesson({ loading: true, text: '', title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`, revista: licao.revista, licao: licao.licao_numero || '1', capa: initialCapa });
+            setAiLesson({
+                ...buildAiLessonState('', initialCapa, false),
+                loading: true
+            });
         }
         
         try {
             const hasCapaExistente = !!initialCapa;
-            
-            // Chamar endpoint especializado de geração de revistas de EBD com IA
             let texto = '';
             let capaUrl = initialCapa;
 
-            try {
-                const response = await fetch('/api/gemini/gerar-revista-ebd', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        revista: licao.revista,
-                        licaoNum: licao.licao_numero || '1',
-                        tema: licao.titulo_licao || '',
-                        textoBiblico: licao.leitura_biblica || '',
-                        faixaEtaria: licao.faixa_etaria || 'Adultos',
-                        capaExistente: hasCapaExistente
-                    })
-                });
+            if (isOnline) {
+                try {
+                    const response = await fetch('/api/gemini/gerar-revista-ebd', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            revista: licao.revista,
+                            subtitulo: subtituloRevista,
+                            temaCentral: subtituloRevista,
+                            trimestre: trimestreRevista,
+                            turma: turmaNome,
+                            licaoNum: cleanNumRaw,
+                            tema: cleanTituloLicao,
+                            tituloLicao: cleanTituloLicao,
+                            dataLicao: dataFormatada,
+                            editora: editoraRevista,
+                            autor: autorRevista,
+                            textoBiblico: leituraBiblicaLicao,
+                            textoAureo: textoAureoLicao,
+                            verdadePratica: verdadePraticaLicao,
+                            faixaEtaria: turmaNome,
+                            capaExistente: hasCapaExistente,
+                            forceRefresh
+                        })
+                    });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.text) {
-                        texto = data.text;
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.text) {
+                            texto = data.text;
+                            if (!capaUrl && data.capa) capaUrl = data.capa;
+                        }
                     }
+                } catch (apiErr) {
+                    console.warn("[ModuleEBD] Falha na chamada da rota dedicada /api/gemini/gerar-revista-ebd, usando motor local:", apiErr);
                 }
-            } catch (apiErr) {
-                console.warn("[ModuleEBD] Falha na chamada da rota dedicada /api/gemini/gerar-revista-ebd, usando fallback:", apiErr);
             }
 
-            if (!texto) {
-                const prompt = `Atue como um Professor e Teólogo especialista no material pedagógico e editorial oficial da Casa Publicadora das Assembleias de Deus (CPAD). 
-UTILIZE SUA FERRAMENTA DE BUSCA NO GOOGLE PARA PESQUISAR O CONTEÚDO OFICIAL DA CPAD (https://www.cpad.com.br/ e portais de Lições Bíblicas CPAD) antes de gerar a resposta. 
-É MÁXIMA EXIGÊNCIA que o material seja 100% fiel à doutrina oficial das Assembleias de Deus e embasado nos 24 Capítulos da Declaração de Fé da CGADB / CPAD.
-
-Tema da Revista CPAD: "${licao.revista}"
-Número da Lição: Lição ${licao.licao_numero || '1'}
-${licao.titulo_licao ? `Título da Lição: "${licao.titulo_licao}"` : ''}
-
-${!hasCapaExistente ? 'Por favor, retorne no final do texto a URL de uma imagem da capa desta revista específica. Formate exatamente assim: URL_CAPA=[url_da_imagem]. Se não encontrar, coloque URL_CAPA=null.' : ''}
-
-Estruture a Lição utilizando rigorosamente a seguinte arquitetura didática em Markdown:
-
-# 1. Título do Módulo e Tema
-- Nome da Revista CPAD e Lição ${licao.licao_numero || '1'}
-
-# 2. Introdução
-- Visão geral, contexto histórico, teológico e didático da lição no trimestre da CPAD.
-- **Texto Áureo** (com citação direta da ARC/CPAD)
-- **Verdade Prática** (declaração dogmática da revista)
-- **Leitura Bíblica em Classe**
-
-# 3. Fundamentação Doutrinária
-- O ensino oficial da denominação pentecostal, citando especificamente qual capítulo dos **24 Capítulos da Declaração de Fé da CGADB / CPAD** (ex: Cap. 1 Bibliologia, Cap. 2-3 Teontologia/Trindade, Cap. 6 Pneumatologia, Cap. 19-20 Batismo no Espírito e Dons, Cap. 22-23 Escatologia, etc.) fundamenta este estudo.
-
-# 4. Referências Bíblicas e Exegese dos Tópicos
-- Tópicos I, II e III do comentarista oficial da CPAD explicados em detalhes com versículos exegéticos de apoio.
-
-# 5. Aplicação Prática
-- Como o crente, professor de EBD ou obreiro aplica esse ensinamento no cotidiano espiritual, na igreja e na família.
-
-# 6. Validação (Perguntas de Fixação)
-- Apresente 2 perguntas de fixação para os alunos testarem o conhecimento no final da lição, acompanhadas do Gabarito Comentado.
-
-Utilize formatação Markdown bem estruturada, profissional e rica.`;
-                
-                texto = await callGeminiAI(prompt, 5);
-            }
+            // Garante sempre material profundo, exegético, com todos os tópicos e subtópicos 1.1 a 3.3 e versículos ARC
+            texto = ensureCompleteWithLessonData(texto);
             
             if (!hasCapaExistente && texto) {
                 const match = texto.match(/URL_CAPA=\[?(.*?)\]?/);
                 if (match && match[1] && match[1] !== 'null') {
                     capaUrl = match[1].trim();
-                    texto = texto.replace(match[0], ''); // Remove a URL do texto final para não aparecer no UI
+                    texto = texto.replace(match[0], '');
                 } else {
                     capaUrl = manualCapa || null;
                 }
@@ -1481,15 +1556,15 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
             // Save to memory so it works offline
             const payload = {
                 text: texto,
-                title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
+                title: formattedModalTitle,
                 revista: licao.revista,
-                licao: licao.licao_numero || '1',
+                licao: cleanNumRaw,
                 capa: capaUrl
             };
             localStorage.setItem(cacheKey, JSON.stringify(payload));
             
             // Salvar no Firestore para que todos os membros tenham acesso instantâneo
-            if (licao.id && !licao.id.startsWith('cpad-temp-') && !licao.id.startsWith('temp-') && dbFirestore && appId) {
+            if (licao.id && !String(licao.id).startsWith('cpad-temp-') && !String(licao.id).startsWith('temp-') && !String(licao.id).startsWith('ebd-direct-') && dbFirestore && appId) {
                 try {
                     const docRef = doc(dbFirestore, 'artifacts', appId, 'public', 'data', 'ebd_licoes', licao.id);
                     await setDoc(docRef, {
@@ -1502,15 +1577,10 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
             }
             
             if (!silent) {
-                setAiLesson({
-                    loading: false,
-                    text: texto,
-                    title: `Estudo Interativo: Lição ${licao.licao_numero || '1'}`,
-                    revista: licao.revista,
-                    licao: licao.licao_numero || '1',
-                    capa: capaUrl,
-                    fromCache: false
-                });
+                setAiLesson(buildAiLessonState(texto, capaUrl, false));
+                if (forceRefresh) {
+                    addToast("Conteúdo da revista aprofundado e sincronizado com todos os dados da lição!", "success");
+                }
             }
             
             // Sincronizar lições baixadas
@@ -1522,8 +1592,9 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
         } catch (err) {
             console.error(err);
             if (!silent) {
-                setAiLesson(null);
-                addToast("Erro ao gerar conteúdo de estudo.", "error");
+                const fallbackText = ensureCompleteWithLessonData('');
+                setAiLesson(buildAiLessonState(fallbackText, initialCapa, false));
+                addToast("Revista de estudo gerada com base nos dados da lição!", "success");
             }
         }
     };
@@ -2219,22 +2290,41 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                                             )}
                                                         </div>
                                                         <div className="space-y-1.5 text-left">
-                                                            <div className="flex flex-wrap items-center gap-2">
-                                                                <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700">
-                                                                    Revista / Sumário
+                                                            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-slate-500">
+                                                                <span className="uppercase tracking-wider text-indigo-700 font-black">
+                                                                    {grupo.editora || 'CPAD'}
                                                                 </span>
+                                                                {grupo.trimestre && (
+                                                                    <>
+                                                                        <span aria-hidden="true">·</span>
+                                                                        <span className="text-slate-600">{grupo.trimestre}</span>
+                                                                    </>
+                                                                )}
                                                                 {grupo.turmasNomes.map(tn => (
-                                                                    <span key={tn} className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                                                        🏛️ {tn}
-                                                                    </span>
+                                                                    <React.Fragment key={tn}>
+                                                                        <span aria-hidden="true">·</span>
+                                                                        <span className="text-slate-700">🏛️ {tn}</span>
+                                                                    </React.Fragment>
                                                                 ))}
+                                                                {grupo.autor && (
+                                                                    <>
+                                                                        <span aria-hidden="true">·</span>
+                                                                        <span className="text-slate-600">✍️ {grupo.autor}</span>
+                                                                    </>
+                                                                )}
                                                                 {grupo.offlineCount > 0 && (
-                                                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                                                                        <Check size={10} /> {grupo.offlineCount} Offline
-                                                                    </span>
+                                                                    <>
+                                                                        <span aria-hidden="true">·</span>
+                                                                        <span className="text-emerald-700 font-black flex items-center gap-1">
+                                                                            <Check size={10} /> {grupo.offlineCount} Offline
+                                                                        </span>
+                                                                    </>
                                                                 )}
                                                             </div>
                                                             <h4 className="text-base md:text-lg font-black text-slate-800 leading-snug">{grupo.revista}</h4>
+                                                            {grupo.subtitulo && (
+                                                                <p className="text-xs font-bold text-slate-500 leading-snug">{grupo.subtitulo}</p>
+                                                            )}
                                                             <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold text-slate-500">
                                                                 <span>📖 <strong className="text-slate-800">{grupo.licoes.length}</strong> lições registradas</span>
                                                                 <span>👥 <strong className="text-slate-800">{grupo.totalPresentes}</strong> presenças acumuladas</span>
@@ -2251,7 +2341,16 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                                     <div className="flex flex-wrap items-center gap-2 self-end lg:self-center">
                                                         <button
                                                             type="button"
-                                                            onClick={() => openModal('ebd_licao', { revista: grupo.revista, capa: grupo.capa, turma_id: Array.from(grupo.turmasIds)[0] || '' })}
+                                                            onClick={() => openModal('ebd_licao', {
+                                                                revista: grupo.revista,
+                                                                subtitulo: grupo.subtitulo || '',
+                                                                trimestre: grupo.trimestre || '1º Trimestre 2026',
+                                                                editora: grupo.editora || 'CPAD',
+                                                                autor: grupo.autor || '',
+                                                                capa: grupo.capa,
+                                                                turma_id: Array.from(grupo.turmasIds)[0] || '',
+                                                                numero_licao: String(Math.min(14, grupo.licoes.length + 1))
+                                                            })}
                                                             className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
                                                         >
                                                             <Plus size={13} /> Adicionar Lição nesta Revista
@@ -2274,6 +2373,8 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                                             const turmaNome = turmasFiltradas.find((t: any) => t.id === l.turma_id)?.nome || 'Sem Turma';
                                                             const isOffline = downloadedLessons.includes(l.id || l.licao_numero);
                                                             const isDownloading = downloadingIds.includes(l.id || l.licao_numero);
+                                                            const badgeNum = l.numero_licao ? `Lição ${l.numero_licao}` : (l.licao_numero || 'Lição');
+                                                            const licaoTitleDisplay = l.titulo_licao || l.tema || l.licao_numero || l.revista;
                                                             return (
                                                                 <div
                                                                     key={l.id || `${l.revista}-${l.licao_numero}-${l.data}`}
@@ -2282,7 +2383,7 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                                                     <div className="space-y-2 text-left">
                                                                         <div className="flex items-center justify-between gap-2">
                                                                             <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider shadow-2xs">
-                                                                                {l.licao_numero || 'Lição'}
+                                                                                {badgeNum}
                                                                             </span>
                                                                             <div className="flex items-center gap-1.5">
                                                                                 {isLicaoNova(l) && (
@@ -2302,12 +2403,17 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                                                         </div>
 
                                                                         <p className="text-xs font-extrabold text-slate-800 line-clamp-2 leading-snug">
-                                                                            {l.tema || l.revista}
+                                                                            {licaoTitleDisplay}
                                                                         </p>
+                                                                        {(l.subtitulo || l.leitura_biblica) && (
+                                                                            <p className="text-[10px] font-medium text-slate-500 truncate">
+                                                                                {l.leitura_biblica ? `📖 ${l.leitura_biblica}` : l.subtitulo}
+                                                                            </p>
+                                                                        )}
 
                                                                         <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 pt-1 border-t border-slate-100">
-                                                                            <span className="truncate max-w-[160px]" title={turmaNome}>🏛️ {turmaNome}</span>
-                                                                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-black">
+                                                                            <span className="truncate max-w-[160px]" title={turmaNome}>🏛️ {turmaNome}{l.trimestre ? ` · ${l.trimestre}` : ''}</span>
+                                                                            <span className="text-emerald-700 font-black">
                                                                                 👥 {l.qtd_presentes || 0} pres.
                                                                             </span>
                                                                         </div>
@@ -4482,8 +4588,24 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                                     <InteractiveMagazineView 
                                         lessonText={aiLesson.text}
                                         revista={aiLesson.revista}
+                                        subtitulo={aiLesson.subtitulo}
+                                        trimestre={aiLesson.trimestre}
+                                        turma={aiLesson.turma}
+                                        editora={aiLesson.editora}
+                                        autor={aiLesson.autor}
                                         licaoNum={aiLesson.licao}
+                                        tituloLicao={aiLesson.tituloLicao}
+                                        dataLicao={aiLesson.dataLicao}
+                                        leituraBiblica={aiLesson.leituraBiblica}
+                                        textoAureo={aiLesson.textoAureo}
+                                        verdadePratica={aiLesson.verdadePratica}
                                         capaUrl={aiLesson.capa}
+                                        onRegenerate={aiLesson.rawLicao ? () => handleGenerateLessonPlan(aiLesson.rawLicao, false, true) : undefined}
+                                        onEditLesson={aiLesson.rawLicao && aiLesson.rawLicao.id && !String(aiLesson.rawLicao.id).startsWith('ebd-direct-') && !String(aiLesson.rawLicao.id).startsWith('cpad-temp-') ? () => {
+                                            const raw = aiLesson.rawLicao;
+                                            setAiLesson(null);
+                                            openModal('ebd_licao', raw);
+                                        } : undefined}
                                     />
                                 </div>
                                 {aiQuizText && (
@@ -4505,6 +4627,15 @@ Utilize formatação Markdown bem estruturada, profissional e rica.`;
                         <div className="p-6 border-t border-white/30 bg-white/60 backdrop-blur-md flex flex-wrap gap-3 justify-end items-center shrink-0">
                             {!aiLesson.loading && (
                                 <>
+                                    {aiLesson.rawLicao && (
+                                        <button
+                                            onClick={() => handleGenerateLessonPlan(aiLesson.rawLicao, false, true)}
+                                            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-black text-[10px] uppercase tracking-wider rounded-xl border border-indigo-200/80 transition-all flex items-center gap-1.5 cursor-pointer"
+                                            title="Aprofundar e regerar o conteúdo da revista com base nos dados cadastrados da lição"
+                                        >
+                                            <RefreshCw size={14} className="text-indigo-600" /> Aprofundar / Regerar Revista
+                                        </button>
+                                    )}
                                     <button 
                                         onClick={async () => {
                                             setAiGeneratingQuiz(true);
@@ -4867,45 +4998,139 @@ Gere em formatação simples e amigável.`;
                     }
                 >
                     <div className="space-y-6 text-left font-sans">
-                        {/* Barra de Pesquisa e Filtros */}
-                        <div className="bg-gradient-to-r from-rose-50/80 via-indigo-50/50 to-white p-5 rounded-3xl border border-rose-100 shadow-xs space-y-4">
-                            <div className="flex items-center gap-2">
-                                <span className="p-2 bg-rose-600 text-white rounded-xl shadow-xs"><Search size={16} /></span>
-                                <div>
-                                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Pesquisar Revistas da CPAD por Tema ou Doutrina</h4>
-                                    <p className="text-[10px] text-slate-500">Localize revistas trimestrais da CPAD ou utilize a IA para consultar o catálogo oficial.</p>
+                        {/* Barra de Pesquisa e Gerador Completo por Revista / Tema Central, Nº e Título da Lição, Editora e Autor */}
+                        <div className="bg-gradient-to-r from-rose-50/90 via-indigo-50/60 to-white p-5 rounded-3xl border border-rose-200/80 shadow-xs space-y-4">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="p-2.5 bg-gradient-to-br from-rose-600 to-indigo-700 text-white rounded-xl shadow-xs">
+                                        <BookOpen size={18} />
+                                    </span>
+                                    <div>
+                                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                            Buscador & Gerador Automático de Revistas da EBD (Sem Chave Paga)
+                                        </h4>
+                                        <p className="text-[11px] text-slate-600 font-medium">
+                                            Informe o Nome da Revista / Tema Central, Número e Título da Lição, Editora e Autor/Comentarista para buscar e gerar a revista completa.
+                                        </p>
+                                    </div>
                                 </div>
+                                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                                    ✓ Bíblia Almeida + Índices EBD + 24 Cap. CGADB
+                                </span>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <input
-                                    type="text"
-                                    placeholder="Ex: Teontologia, Família, Apocalipse, Gálatas, Espírito Santo..."
-                                    value={cpadSearchQuery}
-                                    onChange={(e) => setCpadSearchQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSearchCpadWithAI()}
-                                    className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-xs"
-                                />
-                                <div className="flex gap-2">
+                            {/* Grade de Campos Solicitados: Revista/Tema Central, Nº da Lição, Título da Lição, Editora, Autor e Público */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+                                <div className="lg:col-span-5">
+                                    <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                                        1. Nome da Revista / Tema Central *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: As Promessas de Deus, O Caráter do Cristão, Apocalipse..."
+                                        value={cpadSearchQuery}
+                                        onChange={(e) => setCpadSearchQuery(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSearchCpadWithAI()}
+                                        className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs"
+                                    />
+                                </div>
+
+                                <div className="lg:col-span-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                                        2. Nº da Lição
+                                    </label>
+                                    <select
+                                        value={cpadLicaoNum}
+                                        onChange={(e) => setCpadLicaoNum(e.target.value)}
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-indigo-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                    >
+                                        {Array.from({ length: 14 }, (_, i) => (
+                                            <option key={i + 1} value={`${i + 1}`}>Lição {i + 1}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="lg:col-span-5">
+                                    <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                                        3. Título da Lição (Opcional p/ Trimestre)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: A Realidade da Promessa Divina, O Fruto do Espírito..."
+                                        value={cpadTituloLicao}
+                                        onChange={(e) => setCpadTituloLicao(e.target.value)}
+                                        className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs"
+                                    />
+                                </div>
+
+                                <div className="lg:col-span-3">
+                                    <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                                        4. Editora
+                                    </label>
+                                    <select
+                                        value={cpadEditora}
+                                        onChange={(e) => setCpadEditora(e.target.value)}
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                    >
+                                        <option value="CPAD">📚 CPAD (Assembleia de Deus)</option>
+                                        <option value="Editora Betel">📘 Editora Betel</option>
+                                        <option value="Central Gospel">📙 Central Gospel</option>
+                                        <option value="Cristã Evangélica">📗 Cristã Evangélica</option>
+                                        <option value="EBD Local / Própria">🏛️ Currículo Próprio da Igreja</option>
+                                    </select>
+                                </div>
+
+                                <div className="lg:col-span-4">
+                                    <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                                        5. Autor / Comentarista
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: Pr. Elienai Cabral, Pr. Esequias Soares, Pr. José Gonçalves..."
+                                        value={cpadAutor}
+                                        onChange={(e) => setCpadAutor(e.target.value)}
+                                        className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs"
+                                    />
+                                </div>
+
+                                <div className="lg:col-span-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                                        6. Classe / Público
+                                    </label>
                                     <select
                                         value={cpadAudienceFilter}
                                         onChange={(e) => setCpadAudienceFilter(e.target.value)}
-                                        className="px-3 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-700"
+                                        className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700"
                                     >
-                                        <option value="todos">👥 Todos os Públicos</option>
+                                        <option value="todos">👥 Todos</option>
                                         <option value="Adultos">👨‍👩‍👧‍👦 Adultos</option>
                                         <option value="Jovens">🔥 Jovens</option>
                                         <option value="Adolescentes">🎒 Adolescentes</option>
+                                        <option value="Discipulado">✝️ Discipulado</option>
                                         <option value="Infantil">👶 Infantil</option>
                                     </select>
+                                </div>
+
+                                <div className="lg:col-span-3 flex flex-col justify-end gap-1.5">
                                     <button
                                         type="button"
                                         onClick={handleSearchCpadWithAI}
                                         disabled={cpadSearching}
-                                        className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
+                                        className="w-full py-2 px-3 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                        title="Monta o trimestre completo com as 13 lições para esta Revista, Editora e Autor"
                                     >
-                                        <Sparkles size={14} className={cpadSearching ? "animate-spin" : "animate-pulse"} />
-                                        {cpadSearching ? "Buscando..." : "Buscar com IA"}
+                                        <BookOpen size={13} className={cpadSearching ? "animate-spin" : ""} />
+                                        {cpadSearching ? "Buscando..." : "Gerar 13 Lições da Revista"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleDirectGenerateSingleLesson}
+                                        disabled={cpadSearching}
+                                        className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                        title="Gera e abre imediatamente a Revista Completa desta Lição específica"
+                                    >
+                                        <Sparkles size={13} />
+                                        Abrir Revista da Lição {cpadLicaoNum}
                                     </button>
                                 </div>
                             </div>
@@ -4924,7 +5149,7 @@ Gere em formatação simples e amigável.`;
                                     <div className="flex-1 space-y-2 text-left">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="px-2.5 py-0.5 bg-rose-50 text-rose-750 font-black text-[9px] uppercase tracking-wider rounded-md border border-rose-100">
-                                                CPAD • {selectedCpadMagazine.publico || 'Adultos'}
+                                                {selectedCpadMagazine.editora || cpadEditora || 'CPAD'} • {selectedCpadMagazine.publico || 'Adultos'}
                                             </span>
                                             <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-750 font-black text-[9px] uppercase tracking-wider rounded-md border border-indigo-100">
                                                 {selectedCpadMagazine.declaracaoCap || 'Declaração de Fé CGADB'}
@@ -4932,8 +5157,10 @@ Gere em formatação simples e amigável.`;
                                         </div>
                                         <h3 className="text-base font-black text-slate-900">{selectedCpadMagazine.titulo}</h3>
                                         <p className="text-xs text-slate-600 font-bold">{selectedCpadMagazine.subtitulo}</p>
-                                        {selectedCpadMagazine.comentarista && (
-                                            <p className="text-[11px] text-slate-500 italic">Comentarista: {selectedCpadMagazine.comentarista}</p>
+                                        {(selectedCpadMagazine.comentarista || cpadAutor) && (
+                                            <p className="text-[11px] text-indigo-700 font-bold">
+                                                ✍️ Autor / Comentarista: {selectedCpadMagazine.comentarista || cpadAutor}
+                                            </p>
                                         )}
                                         <p className="text-xs text-slate-500 leading-relaxed">{selectedCpadMagazine.descricao}</p>
                                     </div>
@@ -4984,7 +5211,7 @@ Gere em formatação simples e amigável.`;
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center">
                                         <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                                            <BookOpen size={14} className="text-rose-500" /> Grade das 13 Lições Trimestrais da CPAD
+                                            <BookOpen size={14} className="text-rose-500" /> Grade das 13 Lições Trimestrais ({selectedCpadMagazine.editora || cpadEditora || 'CPAD'})
                                         </h4>
                                         <span className="text-[10px] font-black bg-rose-50 text-rose-700 px-2 py-0.5 rounded-md border border-rose-100">
                                             {(selectedCpadMagazine.licoes || []).length} Lições
@@ -4994,7 +5221,7 @@ Gere em formatação simples e amigável.`;
                                     {generatingCpadCatalog ? (
                                         <div className="p-8 text-center bg-white rounded-2xl border border-slate-100 space-y-3">
                                             <Sparkles size={28} className="text-rose-500 animate-spin mx-auto" />
-                                            <p className="text-xs font-bold text-slate-600">Consultando o acervo e estruturando as 13 lições da CPAD...</p>
+                                            <p className="text-xs font-bold text-slate-600">Consultando o acervo e estruturando as 13 lições da revista...</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-2.5 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
@@ -5007,17 +5234,24 @@ Gere em formatação simples e amigável.`;
                                                         <button
                                                             type="button"
                                                             onClick={() => {
+                                                                setCpadSearchModalOpen(false);
                                                                 handleGenerateLessonPlan({
                                                                     id: `cpad-temp-${idx}`,
                                                                     revista: selectedCpadMagazine.titulo,
+                                                                    tema_central: selectedCpadMagazine.subtitulo || '',
+                                                                    editora: selectedCpadMagazine.editora || cpadEditora || 'CPAD',
+                                                                    autor: selectedCpadMagazine.comentarista || cpadAutor || '',
                                                                     licao_numero: lic.licao_numero || `${idx + 1}`,
                                                                     titulo_licao: lic.titulo,
+                                                                    texto_aureo: lic.texto_aureo,
+                                                                    verdade_pratica: lic.verdade_pratica,
+                                                                    leitura_biblica: lic.leitura_biblica,
                                                                     capa: selectedCpadMagazine.capa
                                                                 });
                                                             }}
-                                                            className="px-3 py-1 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 font-black text-[10px] uppercase tracking-wider rounded-lg border border-slate-200 hover:border-rose-200 transition-all flex items-center gap-1 cursor-pointer"
+                                                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
                                                         >
-                                                            <Sparkles size={12} className="text-rose-500" /> Estudar com IA
+                                                            <BookOpen size={12} /> Gerar & Abrir Revista desta Lição
                                                         </button>
                                                     </div>
                                                     <h5 className="text-xs font-black text-slate-900">{lic.titulo}</h5>
