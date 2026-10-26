@@ -1386,7 +1386,11 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
     { id: 'ap1', name: 'Auditoria de Aparelhos SaaS & Telemetria em Tempo Real', category: 'seguranca', desc: 'Identificação contínua de hardware, IP público verídico, geolocalização física e detecção de status online (100% Real).' },
     { id: 'ap2', name: 'Gestão de Canais Push Criptografados (VAPID / FCM / PWA)', category: 'seguranca', desc: 'Monitoramento multicanal de assinaturas ativas para notificações institucionais, testes de transmissão e revogação remota.' },
     { id: 'ap3', name: 'Pareamento Rápido de Dispositivos via QR Code & PWA', category: 'seguranca', desc: 'Conexão instantânea de smartphones e tablets de obreiros via QR Code com suporte a instalação em tela cheia.' },
-    { id: 'ap4', name: 'Universidade Teológica & E-books Dogmáticos (CGADB / CPAD)', category: 'secretaria', desc: 'Currículo acadêmico fundamentado nos 24 capítulos da Declaração de Fé das Assembleias de Deus com apostilas e certificação.' }
+    { id: 'ap4', name: 'Universidade Teológica & E-books Dogmáticos (CGADB / CPAD)', category: 'secretaria', desc: 'Currículo acadêmico fundamentado nos 24 capítulos da Declaração de Fé das Assembleias de Deus com apostilas e certificação.' },
+    // NOVIDADES GIPP v14.0.0 (REPERTÓRIO INTEGRAL, EBD COM METADADOS E CENTRAL DE UPDATES)
+    { id: 'ml8', name: 'Repertório Musical e Cifras 100% Integrais (Sem Cortes)', category: 'louvor', desc: 'Canções e hinos da Harpa Cristã completos com introduções, todos os versos, refrões, pontes e finalizações íntegras.' },
+    { id: 'ebd1', name: 'Revista EBD com Metadados & Exegese Sólida', category: 'secretaria', desc: 'Cadastro estruturado da lição: título da revista, trimestre, turma, editora, data, lição e capa oficial (computador ou online).' },
+    { id: 'upd1', name: 'Central de Notificações de Atualizações do Sistema', category: 'seguranca', desc: 'Janela inteligente no login que apresenta todas as melhorias e novidades implementadas a cada nova versão do GIPP.' }
   ], []);
 
   const filteredDirectory = useMemo(() => {
@@ -1425,7 +1429,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                   <span className="w-3 h-3 rounded-full bg-amber-500 block" />
                   <span className="w-3 h-3 rounded-full bg-emerald-500 block" />
                 </div>
-                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v13.0.0 Ultimate Platinum v18</span>
+                <span className="text-[9px] font-mono tracking-widest text-slate-500 uppercase">Arquitetura Unificada GIPP v14.0.0 Ultimate Platinum v19</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1989,7 +1993,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       content: (
         <div className="space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed font-semibold font-sans">
-            O GIPP Versão 13.0.0 Ultimate Platinum estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical e cursos teológicos EAD / Universidade Teológica CGADB), na Loja Virtual com emissão de DAV/Nota Fiscal, no Ministério de Louvor com cifras inteligentes e auto-scroll, e na Auditoria de Aparelhos SaaS com telemetria de hardware e rede 100% real.
+            O GIPP Versão 14.0.0 Ultimate Platinum v19 estende as fronteiras da governança com subsistemas focados na preservação de herança das crianças (Salinha Kids), na suíte de produtividade eclesiástica (GIPP Escritório: DOCs e Planilhas), no ensino acadêmico teológico oficial (EBD dominical estruturada com exegese bíblica e metadados editoriais, e Universidade Teológica CGADB/CPAD), na Loja Virtual com emissão de DAV/Nota Fiscal, no Ministério de Louvor com cifras 100% integrais sem cortes, e na Auditoria de Aparelhos SaaS com telemetria de hardware e rede 100% real.
           </p>
 
           <div className="bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200/80 rounded-2xl p-4 space-y-3 text-slate-900 shadow-xs">
@@ -2096,7 +2100,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
             </div>
 
             <p className="text-xs text-slate-700 leading-relaxed font-medium">
-              O GIPP v13.0.0 integra de maneira nativa e oficial os 8 pilares da suíte Google Workspace, proporcionando à igreja conectividade global com proteção de dados corporativa, autenticação segura OAuth 2.0 e criptografia de ponta a ponta sem expor credenciais sensíveis.
+              O GIPP v14.0.0 integra de maneira nativa e oficial os 8 pilares da suíte Google Workspace, proporcionando à igreja conectividade global com proteção de dados corporativa, autenticação segura OAuth 2.0 e criptografia de ponta a ponta sem expor credenciais sensíveis.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-4">
@@ -2318,12 +2322,12 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                 <p className="text-xs text-violet-800 font-semibold mt-0.5">Repertório Musical, Transposição Harmônica, Capotraste, Auto-Scroll e Worship Live Reader</p>
               </div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-600 text-white shadow-xs">
-                Novo v12.0.0
+                Atualizado v14.0.0
               </span>
             </div>
 
             <p className="text-xs text-slate-700 leading-relaxed font-medium">
-              O ecossistema do **Ministério de Louvor GIPP v13.0.0** transforma o acompanhamento musical nos cultos e ensaios, fornecendo aos músicos e regentes um leitor digital interativo de cifras harmônicas, rolagem automatizada contínua, metrônomo calibrado via Web Audio API e modo palco de alta legibilidade.
+              O ecossistema do **Ministério de Louvor GIPP v14.0.0** transforma o acompanhamento musical nos cultos e ensaios, fornecendo aos músicos e regentes um leitor digital interativo de cifras harmônicas 100% integrais sem cortes (todas as estrofes, refrões, pontes e finalizações), rolagem automatizada contínua, metrônomo calibrado via Web Audio API e modo palco de alta legibilidade.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-4">
@@ -2399,7 +2403,7 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
                 <p className="text-xs text-emerald-800 font-semibold mt-0.5">Identificação Contínua de Hardware, IP Público Verídico, Status Online e Notificações Criptografadas</p>
               </div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
-                Novo v13.0.0
+                Versão v14.0.0
               </span>
             </div>
 
@@ -2461,8 +2465,78 @@ Responda pura e estritamente com o objeto JSON estruturado acima para que eu pos
       )
     },
     {
+      id: 'novidades_v14',
+      title: '17. Novidades v14.0.0: Repertório Integral, EBD com Metadados & Avisos de Atualização',
+      shortTitle: 'Novidades v14.0.0',
+      icon: Sparkles,
+      category: 'Geral',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-3xl p-6 shadow-xl border border-indigo-700/50 relative overflow-hidden">
+            <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative z-10 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-sm">
+                  Edição v14.0.0 Ultimate Platinum v19
+                </span>
+                <span className="text-xs font-bold text-indigo-200">Outubro 2026</span>
+              </div>
+              <h3 className="text-xl font-black text-white tracking-tight">
+                Consolidação do Ministério de Louvor, Ensino Bíblico e Gestão de Versões
+              </h3>
+              <p className="text-xs text-indigo-100/90 leading-relaxed font-medium">
+                A versão 14.0.0 eleva os pilares de adoração comunitária e educação cristã do GIPP, entregando canções integrais da primeira à última estrofe, cadastro oficial de lições da EBD com suporte a capas do computador e janela automática de novidades no login.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+              <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 w-fit">
+                <Music size={22} />
+              </div>
+              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">Cifras 100% Integrais (Sem Cortes)</h4>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Todas as músicas do repertório e hinos da Harpa Cristã contêm a estrutura completa: [Intro], [Verso 1], [Pré-Refrão], [Refrão], [Verso 2], [Ponte], [Refrão Final] e [Outro]. Canções salvas anteriormente em formato reduzido recebem auto-upgrade transparente.
+              </p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+              <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 w-fit">
+                <BookOpen size={22} />
+              </div>
+              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">Revista EBD Estruturada</h4>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Metadados completos: Título da Revista, Trimestre, Turma, Editora, Data da Lição, Número e Título. Permite importar capa direto do computador (com compressão rápida) ou via busca web, gerando conteúdo exegético e histórico aprofundado.
+              </p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+              <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 w-fit">
+                <Bell size={22} />
+              </div>
+              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">Janela de Novidades no Login</h4>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Sempre que uma nova atualização é disponibilizada, o operador ou membro recebe uma janela ilustrada logo após autenticar-se. Ao fechar a janela, a confirmação é gravada para que não torne a aparecer até o próximo update oficial.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
+              <CheckCircle size={16} className="text-emerald-600" />
+              Como Consultar as Notas de Atualização Manualmente
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              Mesmo após fechar a janela automática de atualização, qualquer usuário pode revisitar o resumo de novidades a qualquer momento clicando no botão com ícone de brilho (<strong className="text-indigo-600">NOVO</strong>) na barra superior ou clicando sobre o selo de versão (<strong className="text-emerald-700">GIPP Versão 14.0.0</strong>) no rodapé da tela de login.
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
       id: 'faq_geral',
-      title: '17. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
+      title: '18. FAQ Geral & Dúvidas Administrativas e Doutrinárias',
       shortTitle: 'Perguntas Frequentes (FAQ)',
       icon: HelpCircle,
       category: 'Suporte',

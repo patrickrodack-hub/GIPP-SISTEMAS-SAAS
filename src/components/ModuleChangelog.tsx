@@ -47,11 +47,25 @@ const ModuleChangelog = () => (
         <h2 className="text-3xl font-black text-slate-800 mb-6">Histórico de Atualizações</h2>
         <div className="space-y-8">
             
-            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 13.0.0 */}
+            {/* NOVO BLOCO ADICIONADO PARA VERSÃO 14.0.0 */}
             <div className="relative pl-8 border-l-2 border-indigo-600 animate-entrance"> 
                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                <h3 className="font-extrabold text-lg text-indigo-950 font-[Outfit]">v13.0.0 - Auditoria SaaS de Hardware e Aparelhos Conectados em Tempo Real, Telemetria Autêntica de Rede, E-books Teológicos Dogmáticos e Consolidação Ministerial</h3>
+                <h3 className="font-extrabold text-lg text-indigo-950 font-[Outfit]">v14.0.0 - GIPP Ultimate Platinum v19 • Repertório & Cifras Integrais sem Cortes, Revista EBD Estruturada com Metadados e Central de Avisos de Atualização</h3>
                 <p className="text-xs text-indigo-600 font-black uppercase mb-3 tracking-wider">Outubro 2026 (Atual)</p>
+                <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Repertório Musical e Cifras 100% Integrais (Sem Cortes):</strong> Reestruturação e expansão profunda de todo o catálogo de canções cristãs e Harpa Cristã. Eliminação definitiva de qualquer truncamento precoce — agora todas as canções possuem introduções, todos os versos (1, 2, 3), refrões, pontes e finalizações completas.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Auto-Upgrade Retroativo de Músicas:</strong> Rotina automática que detecta canções salvas anteriormente em formato reduzido e as restaura para a versão integral, preservando transposições e tons musicais.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Revista EBD com Metadados Completos & Exegese Sólida:</strong> Adição de campos para Título da Revista, Trimestre, Turma, Subtítulo, Editora, Número e Título da Lição, Data da Lição e Capa Oficial (com importação do computador e busca online), gerando conteúdo didático, histórico e exegético profundo.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Janela Automática de Notificação de Atualizações:</strong> Sistema inteligente que exibe aos usuários logados um resumo interativo com todas as novidades e melhorias aplicadas no sistema. Uma vez visualizado e fechado, não incomoda mais até que uma nova atualização seja lançada.</li>
+                    <li><strong className="text-slate-700 font-sans font-extrabold">Atualização Geral de Pacotes, Planos & Permissões:</strong> Elevação oficial do ecossistema para GIPP v14.0.0 Ultimate Platinum v19, com manuais do usuário, e-books interativos e documentação atualizados integralmente.</li>
+                </ul>
+            </div>
+
+            {/* BLOCO DA VERSÃO 13.0.0 */}
+            <div className="relative pl-8 border-l-2 border-slate-300 opacity-90"> 
+                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400"></div>
+                <h3 className="font-extrabold text-lg text-slate-800 font-[Outfit]">v13.0.0 - Auditoria SaaS de Hardware e Aparelhos Conectados em Tempo Real, Telemetria Autêntica de Rede, E-books Teológicos Dogmáticos e Consolidação Ministerial</h3>
+                <p className="text-xs text-slate-500 font-black uppercase mb-3 tracking-wider">Outubro 2026 (Anterior)</p>
                 <ul className="list-disc pl-4 space-y-2 text-slate-600 text-sm">
                     <li><strong className="text-slate-700 font-sans font-extrabold">Auditoria de Aparelhos SaaS 100% Real (Zero Simulações):</strong> Eliminação total de dados de teste e simulações. Implementação de camada de telemetria baseada em persistência Firestore (<code className="text-indigo-700 font-bold bg-indigo-50 px-1 py-0.5 rounded text-xs">dispositivos_conectados</code>) com sincronização em tempo real (<code className="text-indigo-700 font-bold bg-indigo-50 px-1 py-0.5 rounded text-xs">onSnapshot</code>), heartbeat persistente a cada 60 segundos, e detecção matemática de hardware (Windows, macOS, Linux, Android, iOS, ChromeOS).</li>
                     <li><strong className="text-slate-700 font-sans font-extrabold">Resolução de IP Público & Geolocalização Física:</strong> Criação de endpoint backend nativo <code className="text-indigo-700 font-bold bg-indigo-50 px-1 py-0.5 rounded text-xs">/api/client-info</code> para identificação precisa do endereço IP público do cliente, provedor de internet e localização geográfica verídica, eliminando mascaramento ou faixas fictícias.</li>

@@ -205,7 +205,7 @@ export const ModulePermissoesPlanos = () => {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">Permissões de Planos SaaS</h1>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
-                GIPP v13.0.0
+                GIPP v14.0.0
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -419,7 +419,7 @@ export const ModulePermissoesPlanos = () => {
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-2">
                   <span className="text-white/60 block text-[10px] uppercase font-bold">Versão do Sistema</span>
-                  <span className="font-mono font-bold text-emerald-400">v13.0.0 Platinum v18</span>
+                  <span className="font-mono font-bold text-emerald-400">v14.0.0 Platinum v19</span>
                 </div>
               </div>
             </div>
@@ -624,7 +624,7 @@ export const ModulePermissoesPlanos = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-black text-white">Plano Avançado</h3>
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">Platinum v18</span>
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">Platinum v19</span>
                 </div>
                 <div>
                   <span className="text-3xl font-black text-white">R$ {planosValores.avancado}</span>

@@ -192,6 +192,8 @@ import { InteractiveMagazineView } from './components/InteractiveMagazineView';
 import { requestAppFullscreen } from './lib/performanceHelpers';
 import { preloadModule, startBackgroundModulePreload } from './lib/modulePreloader';
 import { ModalInstalacaoApp } from './components/ModalInstalacaoApp';
+import { ModalUpdateNovidades } from './components/ModalUpdateNovidades';
+import { shouldShowUpdateModal, SYSTEM_CURRENT_VERSION } from './data/systemUpdatesData';
 import { InformeRendimentosIRPF } from './components/InformeRendimentosIRPF';
 import { ProntuarioMinisterial } from './components/ProntuarioMinisterial';
 // ----------------------------
@@ -10060,7 +10062,7 @@ export const PrintSystem = ({
                     <div className="space-y-4">
                         <h2 className="text-xs font-black text-slate-700 uppercase tracking-widest border-b border-slate-250 pb-2 flex justify-between items-center">
                             <span>Demonstrativo Contábil • Folha Analítica Consolidada de Pessoal</span>
-                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 13.0.0 Ultimate Platinum v18</span>
+                            <span className="text-[9px] font-bold text-slate-400 normal-case">Versão 14.0.0 Ultimate Platinum v19</span>
                         </h2>
                         
                         {/* Parameters summary description */}
@@ -12325,6 +12327,23 @@ const HelpHubToggle = ({ className = "" }) => {
             <HelpCircle size={20} className="animate-pulse" />
             <span className="absolute -top-1.5 -right-1.5 bg-indigo-600 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full text-white border border-white shadow-xs tracking-wider">
                 GUIA
+            </span>
+        </button>
+    );
+};
+
+const UpdateNotesToggle = ({ className = "" }) => {
+    const { setShowUpdateModal } = useContext(ChurchContext);
+    return (
+        <button 
+            type="button" 
+            onClick={() => { playMenuSound(); setShowUpdateModal(true); }} 
+            className={`relative p-3 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 text-white rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center hover:scale-105 active:scale-95 duration-200 cursor-pointer ${className}`} 
+            title="Novidades da Atualização do Sistema"
+        >
+            <Sparkles size={20} className="text-amber-300" />
+            <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full text-white border border-white shadow-xs tracking-wider">
+                NOVO
             </span>
         </button>
     );
@@ -16196,6 +16215,7 @@ const AppLayout = () => {
                         <ThemeToggle />
                         <FullScreenToggle />
                         <HelpHubToggle />
+                        <UpdateNotesToggle />
                         <NotificationCenter />
                     </div>
                 </div>
@@ -16461,7 +16481,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                 <div className="relative flex flex-col items-center justify-center p-6 bg-[#f0f0f0] border-2 border-t-white border-l-white border-r-[#404040] border-b-[#404040] shadow-2xl rounded-xs min-w-[340px]">
                     <div className="w-full bg-gradient-to-r from-[#005a9e] via-[#0078d7] to-[#0063b1] text-white px-3 py-1 font-bold text-xs flex items-center justify-between mb-6 shadow-xs">
                         <span>GIPP - C++ (Win32 Enterprise)</span>
-                        <span className="font-mono text-[10px]">v13.0.0 (1.1.9200)</span>
+                        <span className="font-mono text-[10px]">v14.0.0 (1.1.9200)</span>
                     </div>
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-12 h-12 bg-gradient-to-br from-slate-200 to-slate-400 border border-slate-500 rounded-sm flex items-center justify-center shadow-md">
@@ -16535,7 +16555,7 @@ const SplashScreen = ({ onComplete, corTema = '#6366f1', themeBg = 'default', is
                     <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 rounded-full text-xs font-bold uppercase tracking-wider animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.2s', animationFillMode: 'forwards' }}>
                         <span>{saasSettings?.saas_nome_sistema || "GIPP"}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>{saasSettings?.saas_versao_sistema || "Versão 13.0.0 Ultimate Platinum v18"}</span>
+                        <span>{saasSettings?.saas_versao_sistema || "Versão 14.0.0 Ultimate Platinum v19"}</span>
                     </div>
                     <div className="mt-8 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 animate-slide-up-fade" style={{ opacity: 0, animationDelay: '1.5s', animationFillMode: 'forwards' }}>
                         <p className="text-sm md:text-base font-medium text-white/80 tracking-[0.2em] uppercase">
@@ -16794,6 +16814,7 @@ export default function App() {
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [db, _setDbState] = useState(() => {
@@ -16919,6 +16940,19 @@ export default function App() {
           console.warn("Auto-login failed", err);
       }
   }, [db.igreja?.member_auto_login, db.membros, user, view]);
+
+  // Monitora se o usuário autenticado precisa receber o aviso da nova atualização do sistema
+  useEffect(() => {
+    if (user) {
+      const userKey = user.id || user.usuario || 'operador';
+      if (shouldShowUpdateModal(userKey)) {
+        const timer = setTimeout(() => {
+          setShowUpdateModal(true);
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user]);
 
   const globalSearchResults = useMemo(() => {
       if (!globalSearchQuery.trim()) return [];
@@ -19520,8 +19554,10 @@ export default function App() {
     openInstallGuide: (deviceType?: 'smartphone' | 'desktop') => {
       if (deviceType) setInstallDeviceType(deviceType);
       setShowInstallGuide(true);
-    }
-  }), [db, user, view, showHelpHub, sidebarOpen, dismissedAnnouncement, modalOpen, modalType, formData, printMode, printData, toasts, editingItem, authUser, theme, isOnline, osTheme, animBgEnabled, printPalette, printMarginType, printOrientation, printContentScale, notifications, clearedNotifications, fcmToken, fcmStatus, fcmPermission, globalOpenFile, isScreenLocked, showInstallGuide, installDeviceType, installPrompt]);
+    },
+    showUpdateModal, setShowUpdateModal,
+    openUpdateModal: () => setShowUpdateModal(true)
+  }), [db, user, view, showHelpHub, sidebarOpen, dismissedAnnouncement, modalOpen, modalType, formData, printMode, printData, toasts, editingItem, authUser, theme, isOnline, osTheme, animBgEnabled, printPalette, printMarginType, printOrientation, printContentScale, notifications, clearedNotifications, fcmToken, fcmStatus, fcmPermission, globalOpenFile, isScreenLocked, showInstallGuide, installDeviceType, installPrompt, showUpdateModal]);
 
   if (isHalted) {
     return (
@@ -19631,7 +19667,14 @@ export default function App() {
                             </div>
                             <div className="text-center lg:text-left">
                                 <h2 className="text-xl sm:text-2xl xl:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-1">{db.igreja?.nome || "Igreja Local"}</h2>
-                                <p className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] inline-block bg-[#f0fdf4] px-2.5 py-0.5 rounded-md border border-[#bbf7d0]">GIPP Versão 13.0.0 Ultimate Platinum v18</p>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowUpdateModal(true)} 
+                                    title="Clique para ver o que há de novo nesta versão" 
+                                    className="text-[9px] xl:text-[10px] font-black uppercase tracking-widest text-[#10b981] hover:text-emerald-700 inline-flex items-center gap-1 bg-[#f0fdf4] hover:bg-[#dcfce7] px-2.5 py-0.5 rounded-md border border-[#bbf7d0] transition-colors cursor-pointer"
+                                >
+                                    GIPP Versão {SYSTEM_CURRENT_VERSION} Ultimate Platinum v19
+                                </button>
                             </div>
                         </div>
                         <div>
@@ -19828,6 +19871,15 @@ export default function App() {
           initialDeviceType={installDeviceType}
         />
 
+        {showUpdateModal && (
+          <ModalUpdateNovidades
+            isOpen={showUpdateModal}
+            onClose={() => setShowUpdateModal(false)}
+            userId={null}
+            userName={null}
+          />
+        )}
+
         </div> 
       </ChurchContext.Provider>
     ); 
@@ -20000,6 +20052,16 @@ export default function App() {
           logoUrl={db.igreja?.logo || 'https://cdn-icons-png.flaticon.com/512/3004/3004613.png'}
           initialDeviceType={installDeviceType}
         />
+
+        {/* Modal de Novidades da Atualização do Sistema (exibido apenas quando há nova versão após login) */}
+        {showUpdateModal && user && (
+          <ModalUpdateNovidades
+            isOpen={showUpdateModal}
+            onClose={() => setShowUpdateModal(false)}
+            userId={user?.id || user?.usuario || 'user'}
+            userName={user?.nome || user?.usuario}
+          />
+        )}
 
         {/* Holyrics Operator Dock - Controle Não-Bloqueante de Projeção no Telão */}
         <HolyricsOperatorDock onOpenFullStudio={() => setView('midia')} />
