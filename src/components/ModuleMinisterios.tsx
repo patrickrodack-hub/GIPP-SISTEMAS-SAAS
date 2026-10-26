@@ -127,11 +127,32 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
 
     const ministerios = db.departamentos || [];
     
-    // Worship state (Firestore sync with local storage fallback)
+    // Worship state (Firestore sync with local storage fallback e auto-upgrade de canções incompletas)
     const [musicas, setMusicas] = useState<any[]>(() => {
         try {
             const saved = localStorage.getItem('louvor_musicas');
-            return saved ? JSON.parse(saved) : [];
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    let hasUpgraded = false;
+                    const upgraded = parsed.map((m: any) => {
+                        const auth = findAuthenticSong(m.titulo, m.artista);
+                        if (auth && auth.letraCifra && (!m.letra_cifra || m.letra_cifra.length < auth.letraCifra.length * 0.75)) {
+                            hasUpgraded = true;
+                            return {
+                                ...m,
+                                letra_cifra: transposeChordsInText(auth.letraCifra, auth.tomOriginal, m.tom || auth.tomOriginal)
+                            };
+                        }
+                        return m;
+                    });
+                    if (hasUpgraded) {
+                        try { localStorage.setItem('louvor_musicas', JSON.stringify(upgraded)); } catch (_) {}
+                    }
+                    return upgraded;
+                }
+            }
+            return [];
         } catch (_) {
             return [];
         }
@@ -336,8 +357,18 @@ const ModuleMinisterios = ({ initialTab = 1 }: { initialTab?: number }) => {
         const unsubMusicas = onSnapshot(musicasRef, (snapshot: any) => {
             const list: any[] = [];
             snapshot.forEach((docSnap: any) => list.push({ id: docSnap.id, ...docSnap.data() }));
-            setMusicas(list);
-            try { localStorage.setItem('louvor_musicas', JSON.stringify(list)); } catch(_) {}
+            const upgradedList = list.map((m: any) => {
+                const auth = findAuthenticSong(m.titulo, m.artista);
+                if (auth && auth.letraCifra && (!m.letra_cifra || m.letra_cifra.length < auth.letraCifra.length * 0.75)) {
+                    return {
+                        ...m,
+                        letra_cifra: transposeChordsInText(auth.letraCifra, auth.tomOriginal, m.tom || auth.tomOriginal)
+                    };
+                }
+                return m;
+            });
+            setMusicas(upgradedList);
+            try { localStorage.setItem('louvor_musicas', JSON.stringify(upgradedList)); } catch(_) {}
             setLoadingMusicas(false);
         }, () => setLoadingMusicas(false));
 

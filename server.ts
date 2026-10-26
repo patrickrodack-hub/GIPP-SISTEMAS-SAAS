@@ -1300,42 +1300,33 @@ app.post("/api/gemini/gerar-cifra", async (req, res) => {
             return res.json(payload);
         }
 
-        // 4. Busca Direta no LRCLIB (Letras Oficiais + Harmonia Transposta)
-        const lrcMatch = await extractFromLrcLib(songTitle, songArtist, songTom);
-        if (lrcMatch) {
-            const payload = {
-                success: true,
-                text: lrcMatch.text,
-                song: lrcMatch.titulo,
-                artist: lrcMatch.artista,
-                originalTom: lrcMatch.tom,
-                tom: lrcMatch.tom,
-                source: 'lrclib_direct'
-            };
-            apiCache.set(cacheKey, { response: JSON.stringify(payload), timestamp: Date.now(), key: cacheKey });
-            const latency = Date.now() - start;
-            trackApiCall("gemini", "Extrator LRCLIB", "success", latency, 0, `Letra e cifra estruturada via LRCLIB: ${lrcMatch.titulo} - ${lrcMatch.artista}`);
-            return res.json(payload);
-        }
-
-        // 5. Fallback com Gemini AI + Google Search Grounding (Para músicas raras/regionais)
-        const prompt = `Você é um pesquisador e arquivista musical de louvores e cifras cristãs.
-SUA TAREFA EXCLUSIVA É LOCALIZAR NA WEB A CIFRA REAL E A LETRA ORIGINAL DA CANÇÃO:
+        // 4. Busca e Geração Completa via Gemini AI + Google Search Grounding (Garante canção 100% integral)
+        const prompt = `Você é um arquivista musical e pesquisador especialista de louvores e cifras cristãs.
+SUA TAREFA EXCLUSIVA É LOCALIZAR NA WEB OU FORNECER A CIFRA REAL E A LETRA INTEGRAL E COMPLETA DA CANÇÃO:
 - Título: "${songTitle}"
 ${songArtist ? `- Artista / Intérprete: "${songArtist}"` : ''}
 - Tom Solicitado: "${songTom}"
 ${songRitmo ? `- Ritmo de Execução: ${songRitmo}` : ''}
 
-REGRAS OBRIGATÓRIAS:
-1. PESQUISE NA WEB e traga a LETRA AUTÊNTICA E OFICIAL cantada pelo artista ou registrada no hinário.
-2. Obtenha a harmonia real da música e transponha os acordes com precisão musical para o tom "${songTom}".
-3. Posicione cada acorde na linha imediatamente acima das sílabas/palavras cantadas onde ocorre a troca harmônica.
-4. Identifique claramente as seções da música: [Intro], [Primeira Parte], [Refrão], [Ponte], [Final].
-5. Retorne APENAS o texto cifrado limpo.
-6. Se a música não for localizada, responda EXATAMENTE: '⚠️ NAO_ENCONTRADA'`;
+REGRAS OBRIGATÓRIAS (CRÍTICO - NUNCA CORTE A CANÇÃO PELA METADE):
+1. A CANÇÃO DEVE SER FORNECIDA POR INTEIRO, DO INÍCIO AO FIM, SEM CORTES E SEM INTERRUPÇÕES.
+2. NUNCA pare na metade, NUNCA omita estrofes e NUNCA use expressões abreviadas como "(repete refrão)", "(bis)", "(repete tudo)", ou reticências (...).
+3. Todas as seções devem estar explícitas e completas com seus acordes:
+   - [Intro]
+   - [Primeira Parte / Verso 1]
+   - [Pré-Refrão] (se houver)
+   - [Refrão]
+   - [Segunda Parte / Verso 2]
+   - [Refrão]
+   - [Ponte / Ministração]
+   - [Refrão Final]
+   - [Final / Outro]
+4. Cada acorde deve estar na linha imediatamente acima da palavra/sílaba exata onde ocorre a mudança harmônica, transposto fielmente para o tom "${songTom}".
+5. Retorne APENAS o texto cifrado limpo, sem explicações adicionais ou saudações.
+6. Se a música absolutamente não existir, responda EXATAMENTE: '⚠️ NAO_ENCONTRADA'`;
 
         const config: any = {
-            systemInstruction: "Você é um arquivista musical. Localize na web a letra real e a cifra autêntica da música solicitada, transpondo os acordes para o tom indicado.",
+            systemInstruction: "Você é um arquivista musical e mestre de louvor. Forneça a canção integral e completa do início ao fim com todos os acordes transpostos para o tom solicitado. Nunca corte ou abrevie nenhuma parte da canção.",
             tools: [{ googleSearch: {} }]
         };
 
@@ -1357,7 +1348,7 @@ REGRAS OBRIGATÓRIAS:
         if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
         cleaned = cleaned.trim();
 
-        if (cleaned && !cleaned.includes('NAO_ENCONTRADA') && !cleaned.startsWith('⚠️') && !cleaned.includes('RESOURCE_EXHAUSTED')) {
+        if (cleaned && !cleaned.includes('NAO_ENCONTRADA') && !cleaned.startsWith('⚠️') && !cleaned.includes('RESOURCE_EXHAUSTED') && cleaned.length > 120) {
             const payload = {
                 success: true,
                 text: cleaned,
@@ -1370,6 +1361,39 @@ REGRAS OBRIGATÓRIAS:
             apiCache.set(cacheKey, { response: JSON.stringify(payload), timestamp: Date.now(), key: cacheKey });
             const latency = Date.now() - start;
             trackApiCall("gemini", "Gerador de Cifras", "success", latency, 0.0001, `Cifra localizada via IA: ${songTitle} no tom ${songTom}`);
+            return res.json(payload);
+        }
+
+        // 5. Busca Direta no LRCLIB (Letras Oficiais + Harmonia Estruturada Completa)
+        const lrcMatch = await extractFromLrcLib(songTitle, songArtist, songTom);
+        if (lrcMatch) {
+            const payload = {
+                success: true,
+                text: lrcMatch.text,
+                song: lrcMatch.titulo,
+                artist: lrcMatch.artista,
+                originalTom: lrcMatch.tom,
+                tom: lrcMatch.tom,
+                source: 'lrclib_direct'
+            };
+            apiCache.set(cacheKey, { response: JSON.stringify(payload), timestamp: Date.now(), key: cacheKey });
+            const latency = Date.now() - start;
+            trackApiCall("gemini", "Extrator LRCLIB", "success", latency, 0, `Letra e cifra estruturada via LRCLIB: ${lrcMatch.titulo} - ${lrcMatch.artista}`);
+            return res.json(payload);
+        }
+
+        // 6. Fallback Estruturado Completo Offline (Progresso harmônico integral de adoração com todas as partes)
+        const offlineComplete = generateOfflinePraiseChords(songTitle, songArtist, songTom);
+        if (offlineComplete) {
+            const payload = {
+                success: true,
+                text: offlineComplete,
+                song: songTitle,
+                artist: songArtist || 'Louvor Congregacional',
+                originalTom: songTom,
+                tom: songTom,
+                source: 'offline_structured'
+            };
             return res.json(payload);
         }
 

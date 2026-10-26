@@ -52,13 +52,30 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
   const [selectedPasta, setSelectedPasta] = useState<string>('todas');
   const [selectedTomFilter, setSelectedTomFilter] = useState<string>('todos');
 
-  // Músicas carregadas
+  // Músicas carregadas com upgrade automático de canções incompletas
   const [musicas, setMusicas] = useState<MusicaRepertorio[]>(() => {
     try {
       const saved = localStorage.getItem('louvor_musicas');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          let hasUpgraded = false;
+          const upgraded = parsed.map((m: any) => {
+            const auth = findAuthenticSong(m.titulo, m.artista);
+            if (auth && auth.letraCifra && (!m.letra_cifra || m.letra_cifra.length < auth.letraCifra.length * 0.75)) {
+              hasUpgraded = true;
+              return {
+                ...m,
+                letra_cifra: transposeChordsInText(auth.letraCifra, auth.tomOriginal, m.tom || auth.tomOriginal)
+              };
+            }
+            return m;
+          });
+          if (hasUpgraded) {
+            try { localStorage.setItem('louvor_musicas', JSON.stringify(upgraded)); } catch (_) {}
+          }
+          return upgraded;
+        }
       }
     } catch (_) {}
     return (db?.louvor_musicas && Array.isArray(db.louvor_musicas) && db.louvor_musicas.length > 0)
@@ -180,8 +197,18 @@ export const PortalRepertorio: React.FC<PortalRepertorioProps> = ({
           list.push({ id: docSnap.id, ...(docSnap.data() as any) });
         });
         if (list.length > 0) {
-          setMusicas(list);
-          try { localStorage.setItem('louvor_musicas', JSON.stringify(list)); } catch (_) {}
+          const upgradedList = list.map((m: any) => {
+            const auth = findAuthenticSong(m.titulo, m.artista);
+            if (auth && auth.letraCifra && (!m.letra_cifra || m.letra_cifra.length < auth.letraCifra.length * 0.75)) {
+              return {
+                ...m,
+                letra_cifra: transposeChordsInText(auth.letraCifra, auth.tomOriginal, m.tom || auth.tomOriginal)
+              };
+            }
+            return m;
+          });
+          setMusicas(upgradedList);
+          try { localStorage.setItem('louvor_musicas', JSON.stringify(upgradedList)); } catch (_) {}
         }
       }, (err) => console.warn("Erro ao ouvir musicas do repertorio:", err));
 

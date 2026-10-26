@@ -258,41 +258,82 @@ Verei na glória o meu Jesus, que vivo está`,
     bpm: '70',
     pasta: 'Domingo',
     letra_cifra: `[Intro]
-G  C  G  C
+G   C9   G   C9
 
 [Verso 1]
-      G                  C
+      G                  C9
 Te amo, Deus, Tua graça nunca falha
-    D/F#  Em          C            D
+    D/F#  Em          C9           D
 Todos os dias eu estou em Tuas mãos
-                Em      C
+                Em      C9
 Desde quando me levanto
             G   D/F#  Em
 Até o meu deitar
-      C           D             G
+      C9          D             G
 Eu cantarei da bondade de Deus
 
 [Refrão]
-C                       G
+C9                      G
    És fiel em todo tempo
-C                           G            D
+C9                          G            D
    Em todo tempo Tu és tão, tão bom
-C                          Em     D    C
+C9                         Em     D/F#  C9
    Com todo fôlego que há em mim
                   D             G
    Eu cantarei da bondade de Deus
 
 [Verso 2]
-      G                      C
-Tua voz me guia em meio à tempestade
-     D/F#  Em        C              D
+      G                      C9
+Tua doce voz que me guia em meio ao fogo
+     D/F#  Em        C9             D
 Na escuridão Tua presença me sustenta
-            Em        C
+            Em        C9
 Te chamo de Pai
              G   D/F#  Em
 Te chamo de Amigo
-      C          D             G
-Eu vivi na bondade de Deus`,
+      C9         D             G
+Eu vivi na bondade de Deus
+
+[Refrão]
+C9                      G
+   És fiel em todo tempo
+C9                          G            D
+   Em todo tempo Tu és tão, tão bom
+C9                         Em     D/F#  C9
+   Com todo fôlego que há em mim
+                  D             G
+   Eu cantarei da bondade de Deus
+
+[Ponte]
+G/B        C9
+Tua bondade me seguirá
+     D              G
+Me seguirá, Senhor
+G/B        C9
+Tua bondade me seguirá
+     D              G
+Me seguirá, Senhor
+       G/B            C9
+Eu me rendo a Ti, me entrego a Ti
+     D              Em
+Minha vida é Teu altar
+G/B        C9
+Tua bondade me seguirá
+     D              G
+Me seguirá, Senhor
+
+[Refrão Final]
+C9                      G
+   És fiel em todo tempo
+C9                          G            D
+   Em todo tempo Tu és tão, tão bom
+C9                         Em     D/F#  C9
+   Com todo fôlego que há em mim
+                  D             G
+   Eu cantarei da bondade de Deus
+
+[Final]
+C9   D   G`,
     arquivos: []
   },
   {
@@ -304,9 +345,9 @@ Eu vivi na bondade de Deus`,
     bpm: '65',
     pasta: 'Santa Ceia',
     letra_cifra: `[Intro]
-Am  G  F  G  Am
+Am   G   F   G   Am
 
-[Verso]
+[Verso 1]
          Am               G
 Porque d'Ele e por Ele
         F              E
@@ -332,7 +373,40 @@ São os Teus caminhos
              F
 E inescrutáveis
              E
-Os Teus juízos`,
+Os Teus juízos
+           Am              G
+Quem conheceu a mente do Senhor?
+           F                 E
+Ou quem foi o Seu conselheiro?
+
+[Refrão]
+        Am       G
+A Ele a glória,
+        F        E
+A Ele a glória,
+        Am   G          F    E
+A Ele a glória, pra sempre amém!
+
+[Verso 2]
+         Am               G
+Porque d'Ele e por Ele
+        F              E
+Para Ele são todas as coisas
+         Am               G
+Porque d'Ele e por Ele
+        F              E
+Para Ele são todas as coisas
+
+[Refrão Final]
+        Am       G
+A Ele a glória,
+        F        E
+A Ele a glória,
+        Am   G          F    E   Am
+A Ele a glória, pra sempre amém!
+
+[Final]
+G   F   E   Am`,
     arquivos: []
   },
   {
@@ -344,16 +418,15 @@ Os Teus juízos`,
     bpm: '124',
     pasta: 'Jovens',
     letra_cifra: `[Intro]
-D  G  Bm  G
+D   G   Bm   G
 
-[Verso]
+[Verso 1]
 D
 Tu és o Deus dessa terra
 G
 Tu és o Rei desse povo
 Bm                         G
 És o Senhor dessa nação, Tu és
-
 D
 Esperança aos desenganados
 G
@@ -371,7 +444,60 @@ Grandes coisas vão acontecer aqui
 A
 Grandes coisas vão acontecer aqui
 G
-Nesta cidade`,
+Nesta cidade!
+
+[Verso 2]
+D
+Tu és a cura das dores
+G
+A salvação dos perdidos
+Bm                       G
+Tu és o Deus libertador, Tu és
+D
+Glória e honra ao Teu nome
+G
+Pois toda terra Te adora
+Bm                          G
+Cristo ressurreto e triunfador, Tu és
+
+[Refrão]
+Bm          A         G
+Não há outro Deus como Tu
+Bm          A         G
+Não há outro Deus como Tu
+D
+Grandes coisas vão acontecer aqui
+A
+Grandes coisas vão acontecer aqui
+G
+Nesta cidade!
+
+[Ponte]
+Bm            A               G
+Mais e mais Te queremos, ó Senhor
+Bm            A               G
+Mais e mais Te queremos, ó Senhor
+D
+Grandes coisas vão acontecer aqui
+A
+Grandes coisas vão acontecer aqui
+G
+Nesta cidade!
+
+[Refrão Final]
+Bm          A         G
+Não há outro Deus como Tu
+Bm          A         G
+Não há outro Deus como Tu
+D
+Grandes coisas vão acontecer aqui
+A
+Grandes coisas vão acontecer aqui
+G                 D
+Nesta cidade!
+
+[Final]
+G   Bm   G   D`,
     arquivos: []
   },
   {
@@ -383,7 +509,7 @@ Nesta cidade`,
     bpm: '72',
     pasta: 'Especial',
     letra_cifra: `[Intro]
-C  G/B  Am  F
+C   G/B   Am   F
 
 [Verso 1]
 C                             G/B
@@ -393,7 +519,7 @@ Tudo o que eu consigo é imaginar
                              F
 A riqueza que existe dentro de você
 C                                  G/B
-O ouro eu consegui e благо compreendi
+O ouro eu consegui e logo compreendi
                                  Am
 Que o Teu amor na cruz me fez vencer
                                  F
@@ -411,7 +537,56 @@ Você é precioso, mais raro que o ouro puro de Ofir
           Am                    F
 Se você desistiu, Deus não vai desistir
            Dm                    G           C
-Você vale ouro, você é a pérola do Salvador`,
+Você vale ouro, você é a pérola do Salvador
+
+[Verso 2]
+C                                G/B
+Quem te viu chorando pelo canto da estrada
+                                Am
+Não imaginava a tua história tão honrada
+                               F
+Pois quem te gerou foi o Deus do impossível
+C                                  G/B
+Ele te ungiu e te chamou pelo teu nome
+                                Am
+Fez de ti um vaso pra guardar o Teu tesouro
+                             F
+Você é um espelho que reflete a glória do Senhor
+
+[Refrão]
+         C                     G/B
+Você é um espelho que reflete a imagem do Senhor
+              Am                        F
+Não chore se o mundo ainda não notou
+          Dm                     G
+Já é o bastante Deus reconhecer o seu valor
+        C                G/B
+Você é precioso, mais raro que o ouro puro de Ofir
+          Am                    F
+Se você desistiu, Deus não vai desistir
+           Dm                    G           C
+Você vale ouro, você é a pérola do Salvador
+
+[Ponte]
+F                     G
+O Teu valor não está naquilo que você tem
+Am                   Em
+O Teu valor está no sangue derramado
+F                      G
+Jesus pagou o mais alto preço por ti
+Dm                   G
+Você é herdeiro do Pai amado!
+
+[Refrão Final]
+        C                G/B
+Você é precioso, mais raro que o ouro puro de Ofir
+          Am                    F
+Se você desistiu, Deus não vai desistir
+           Dm                    G           C
+Você vale ouro, você é a pérola do Salvador
+
+[Final]
+G/B   Am   F   C`,
     arquivos: []
   },
   {
@@ -423,9 +598,9 @@ Você vale ouro, você é a pérola do Salvador`,
     bpm: '64',
     pasta: 'Vigília',
     letra_cifra: `[Intro]
-E  B  C#m  A
+E   B   C#m   A
 
-[Verso]
+[Verso 1]
 E                 B
 Seguro estou nos braços
             C#m
@@ -445,7 +620,46 @@ Em Teus braços é meu descanso
 B
 Em Teus braços é meu descanso
 C#m                  A
-Em Teus braços é meu descanso`,
+Em Teus braços é meu descanso
+
+[Verso 2]
+E                 B
+O Teu toque cura a minha ferida
+C#m               A
+Tua voz afasta todo o meu temor
+E                 B
+Não há tempestade que me abale
+C#m               A
+Quando estou firmado em Teu amor
+
+[Refrão]
+E
+Em Teus braços é meu descanso
+B
+Em Teus braços é meu descanso
+C#m                  A
+Em Teus braços é meu descanso
+
+[Ponte]
+C#m
+Eu me sinto tão amado
+B
+Como um filho nos braços do pai
+A
+Não há lugar onde eu queira estar
+B
+A não ser junto a Ti, Senhor
+
+[Refrão Final]
+E
+Em Teus braços é meu descanso
+B
+Em Teus braços é meu descanso
+C#m                  A        E
+Em Teus braços é meu descanso
+
+[Final]
+B   C#m   A   E`,
     arquivos: []
   }
 ];
