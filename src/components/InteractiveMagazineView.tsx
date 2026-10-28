@@ -2,7 +2,8 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { 
   BookOpen, Sparkles, BookOpenText, Award, 
   Calendar, Check, Quote, Scroll, Image as ImageIcon,
-  ShieldCheck, Users, Building2, RefreshCw, Edit3, HelpCircle, CheckCircle2
+  ShieldCheck, Users, Building2, RefreshCw, Edit3, HelpCircle, CheckCircle2,
+  Volume2, Play, Pause, Square, SkipBack, SkipForward, Headphones, X
 } from 'lucide-react';
 import { BibleReferenceModal } from './BibleReferenceModal';
 import {
@@ -10,6 +11,7 @@ import {
   resolveDogmaticChapter
 } from '../data/ebdCatalogDatabase';
 import { getFormattedBiblePassageARC } from '../data/bibliaOfflineData';
+import { useAudioNarration, AudioSegment } from '../hooks/useAudioNarration';
 
 export interface InteractiveMagazineViewProps {
   lessonText: string;
@@ -544,6 +546,145 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
     verdadePratica
   ]);
 
+  // Segmentos de Áudio da Lição EBD (Voz natural e acompanhamento dos blocos didáticos)
+  const [showAudioPlayer, setShowAudioPlayer] = useState<boolean>(false);
+  const [activeAudioSectionId, setActiveAudioSectionId] = useState<string | null>(null);
+
+  const ebdAudioSegments: AudioSegment[] = useMemo(() => {
+    const list: AudioSegment[] = [];
+
+    // 1. Título e Metadados
+    list.push({
+      id: 'section-header',
+      label: `Lição ${cleanLicaoNum}: ${parsedMagazine.title}`,
+      sublabel: 'Introdução e Metadados',
+      text: `Lição ${cleanLicaoNum}. ${parsedMagazine.title}. Revista ${revista}. Base bíblica: ${parsedMagazine.bibleRefHeader}. Doutrina: ${parsedMagazine.dogmaticCap}, ${parsedMagazine.dogmaticTitle}.`
+    });
+
+    // 2. Texto Áureo
+    if (parsedMagazine.goldenText) {
+      list.push({
+        id: 'section-golden',
+        label: `Texto Áureo da Lição ${cleanLicaoNum}`,
+        sublabel: 'Memória e Meditação',
+        text: `Texto Áureo: ${parsedMagazine.goldenText}`
+      });
+    }
+
+    // 3. Verdade Prática
+    if (parsedMagazine.practicalTruth) {
+      list.push({
+        id: 'section-truth',
+        label: 'Verdade Prática',
+        sublabel: 'Fundamento Ético',
+        text: `Verdade Prática: ${parsedMagazine.practicalTruth}`
+      });
+    }
+
+    // 4. Leitura Bíblica em Classe
+    if (parsedMagazine.bibleReading) {
+      list.push({
+        id: 'section-bible',
+        label: `Leitura Bíblica: ${parsedMagazine.bibleRefHeader}`,
+        sublabel: 'Passagem ARC',
+        text: `Leitura Bíblica em Classe, ${parsedMagazine.bibleRefHeader}. ${parsedMagazine.bibleReading.replace(/Referência Base:[^]+?\n/gi, '')}`
+      });
+    }
+
+    // 5. Introdução
+    if (parsedMagazine.intro) {
+      list.push({
+        id: 'section-intro',
+        label: 'Introdução da Lição',
+        sublabel: 'Contextualização',
+        text: `Introdução da Lição: ${parsedMagazine.intro}`
+      });
+    }
+
+    // 6. Fundamentação Doutrinária
+    if (parsedMagazine.doctrinal && parsedMagazine.doctrinal.length > 0) {
+      list.push({
+        id: 'section-doctrinal',
+        label: `Fundamentação CGADB/CPAD: ${parsedMagazine.dogmaticCap}`,
+        sublabel: 'Doutrina Oficial',
+        text: `Fundamentação Doutrinária Oficial das Assembleias de Deus, ${parsedMagazine.dogmaticCap}, ${parsedMagazine.dogmaticTitle}. ${parsedMagazine.doctrinal.join(' ')}`
+      });
+    }
+
+    // 7. Tópicos e Subtópicos
+    parsedMagazine.topics.forEach((topic, tIdx) => {
+      list.push({
+        id: `section-topic-${tIdx}`,
+        label: `Tópico ${topic.roman}: ${topic.title}`,
+        sublabel: topic.topicRefs || `Tópico ${topic.roman}`,
+        text: `Tópico ${topic.roman}: ${topic.title}. ${topic.introParagraphs.join(' ')}`
+      });
+
+      topic.subtopics.forEach((sub, sIdx) => {
+        list.push({
+          id: `section-subtopic-${tIdx}-${sIdx}`,
+          label: `${sub.code} ${sub.title}`,
+          sublabel: `Tópico ${topic.roman}`,
+          text: `Subtópico ${sub.code}: ${sub.title}. ${sub.paragraphs.join(' ')} ${sub.classApplication ? 'Aplicação na Classe: ' + sub.classApplication : ''}`
+        });
+      });
+
+      if (topic.synthesis) {
+        list.push({
+          id: `section-synthesis-${tIdx}`,
+          label: `Síntese do Tópico ${topic.roman}`,
+          sublabel: 'Resumo Teológico',
+          text: `Síntese Teológica do Tópico ${topic.roman}: ${topic.synthesis}`
+        });
+      }
+    });
+
+    // 8. Aplicação Prática
+    if (parsedMagazine.application && parsedMagazine.application.length > 0) {
+      list.push({
+        id: 'section-application',
+        label: 'Aplicação Prática e Discipulado',
+        sublabel: 'Vida Cristã',
+        text: `Aplicação Prática para a Vida Cristã, Família e Igreja: ${parsedMagazine.application.join('. ')}`
+      });
+    }
+
+    // 9. Conclusão
+    if (parsedMagazine.conclusion) {
+      list.push({
+        id: 'section-conclusion',
+        label: 'Conclusão da Lição',
+        sublabel: 'Encerramento Pastoral',
+        text: `Conclusão da Lição: ${parsedMagazine.conclusion}`
+      });
+    }
+
+    return list;
+  }, [parsedMagazine, cleanLicaoNum, revista]);
+
+  const audioNarration = useAudioNarration(ebdAudioSegments, {
+    onSegmentChange: (seg) => {
+      setActiveAudioSectionId(String(seg.id));
+      const el = document.getElementById(`ebd-${seg.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+    onFinish: () => {
+      setActiveAudioSectionId(null);
+    }
+  });
+
+  const handlePlaySectionAudio = (sectionId: string) => {
+    setShowAudioPlayer(true);
+    const idx = ebdAudioSegments.findIndex(s => String(s.id) === sectionId);
+    if (idx >= 0) {
+      audioNarration.jumpTo(idx);
+    } else {
+      audioNarration.play(0);
+    }
+  };
+
   const finalCoverImage = useMemo(() => {
     if (capaUrl && capaUrl !== 'null' && !capaUrl.includes('URL_CAPA')) return capaUrl;
     return DEFAULT_COVERS[(parseInt(cleanLicaoNum, 10) || 1) % DEFAULT_COVERS.length];
@@ -624,6 +765,31 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             </button>
           )}
 
+          {/* Botão de Ouvir Lição em Áudio */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowAudioPlayer(prev => !prev);
+              if (!showAudioPlayer && !audioNarration.isPlaying) {
+                audioNarration.play(0);
+              }
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer border shadow-xs ${
+              audioNarration.isPlaying
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white ring-2 ring-emerald-400 border-transparent'
+                : showAudioPlayer
+                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+            }`}
+            title="Ouvir toda a lição em áudio narrado com voz natural"
+          >
+            <Headphones size={13} className={audioNarration.isPlaying ? 'animate-bounce text-white' : 'text-emerald-700'} />
+            <span>{audioNarration.isPlaying ? 'Ouvindo Lição...' : 'Ouvir Lição em Áudio'}</span>
+            {audioNarration.isPlaying && (
+              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping inline-block ml-0.5" />
+            )}
+          </button>
+
           <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 shadow-inner">
             <button
               type="button"
@@ -654,6 +820,170 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
         </div>
       </div>
 
+      {/* BARRA DO REPRODUTOR DE ÁUDIO DA REVISTA EBD */}
+      {showAudioPlayer && (
+        <div className="bg-slate-900 border-b border-emerald-500/30 text-white px-4 md:px-8 py-3 shrink-0 z-30 shadow-lg animate-fadeIn font-sans">
+          <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            {/* Informações da Seção Atual */}
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-black shrink-0 shadow-md">
+                <Headphones size={20} className={audioNarration.isPlaying ? 'animate-pulse' : ''} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-sans font-black text-emerald-300 text-xs sm:text-sm truncate">
+                    Lição {cleanLicaoNum} • {audioNarration.currentSegment?.label || parsedMagazine.title}
+                  </span>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                    Bloco {audioNarration.currentIndex + 1} de {ebdAudioSegments.length}
+                  </span>
+                  {audioNarration.isPlaying && (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      Voz Ativa
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-300 truncate max-w-md mt-0.5">
+                  {audioNarration.currentSegment?.text ? audioNarration.currentSegment.text.slice(0, 100) + '...' : 'Pronto para reprodução'}
+                </p>
+              </div>
+            </div>
+
+            {/* Controles Centrais de Reprodução */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={audioNarration.prev}
+                disabled={audioNarration.currentIndex <= 0}
+                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-emerald-300 transition cursor-pointer"
+                title="Bloco Anterior"
+              >
+                <SkipBack size={16} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (audioNarration.isPlaying) {
+                    audioNarration.pause();
+                  } else if (audioNarration.isPaused) {
+                    audioNarration.resume();
+                  } else {
+                    audioNarration.play();
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black flex items-center gap-2 shadow-md cursor-pointer transition transform active:scale-95"
+                title={audioNarration.isPlaying ? 'Pausar Áudio' : 'Ouvir Áudio'}
+              >
+                {audioNarration.isPlaying ? (
+                  <>
+                    <Pause size={16} className="fill-current" />
+                    <span className="text-xs">Pausar</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={16} className="fill-current" />
+                    <span className="text-xs">Ouvir</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={audioNarration.stop}
+                disabled={!audioNarration.isPlaying && !audioNarration.isPaused}
+                className="p-2 rounded-lg bg-slate-800 hover:bg-red-950 hover:text-red-300 disabled:opacity-30 text-slate-300 transition cursor-pointer"
+                title="Parar Reprodução"
+              >
+                <Square size={16} />
+              </button>
+
+              <button
+                type="button"
+                onClick={audioNarration.next}
+                disabled={audioNarration.currentIndex >= ebdAudioSegments.length - 1}
+                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-emerald-300 transition cursor-pointer"
+                title="Próximo Bloco"
+              >
+                <SkipForward size={16} />
+              </button>
+            </div>
+
+            {/* Configurações: Velocidade, Voz e Fechar */}
+            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+              {/* Seletor de Velocidade */}
+              <div className="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+                {[0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
+                  <button
+                    key={rate}
+                    type="button"
+                    onClick={() => audioNarration.changeRate(rate)}
+                    className={`px-1.5 py-1 text-[10px] font-bold rounded-md transition cursor-pointer ${
+                      audioNarration.playbackRate === rate
+                        ? 'bg-emerald-500 text-white font-black shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {rate}x
+                  </button>
+                ))}
+              </div>
+
+              {/* Seletor de Voz em Português */}
+              {audioNarration.availableVoices.length > 1 && (
+                <select
+                  value={audioNarration.selectedVoice}
+                  onChange={(e) => audioNarration.changeVoice(e.target.value)}
+                  className="bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-medium rounded-lg px-2 py-1.5 outline-hidden cursor-pointer max-w-[120px] truncate"
+                  title="Voz do Leitor"
+                >
+                  {audioNarration.availableVoices.map((v) => (
+                    <option key={v.name} value={v.name}>
+                      {v.name.replace(/Google|Microsoft|pt-BR|pt_BR/gi, '').trim() || v.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  audioNarration.stop();
+                  setShowAudioPlayer(false);
+                }}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer ml-1"
+                title="Fechar Reprodutor de Áudio"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+
+          {/* Barra de Progresso da Lição */}
+          <div className="max-w-4xl mx-auto mt-2.5">
+            <div 
+              className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden flex cursor-pointer hover:h-2 transition-all" 
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+                const targetIdx = Math.floor(ratio * ebdAudioSegments.length);
+                if (targetIdx >= 0 && targetIdx < ebdAudioSegments.length) {
+                  audioNarration.jumpTo(targetIdx);
+                }
+              }}
+              title="Clique para saltar para qualquer parte da lição"
+            >
+              <div
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 rounded-full"
+                style={{ width: `${audioNarration.progressPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Área Principal de Leitura */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'reading' ? (
@@ -666,7 +996,14 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
           <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 md:py-10 space-y-10">
             
             {/* 1. CAPA E FICHA EDITORIAL COMPLETA DA REVISTA E LIÇÃO */}
-            <div className="relative rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-950 text-white shadow-2xl border border-white/10">
+            <div 
+              id="ebd-section-header"
+              className={`relative rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-950 text-white shadow-2xl border transition-all ${
+                activeAudioSectionId === 'section-header'
+                  ? 'border-emerald-400 ring-4 ring-emerald-400/40'
+                  : 'border-white/10'
+              }`}
+            >
               <div className="absolute inset-0 opacity-35 mix-blend-overlay">
                 <img 
                   src={finalCoverImage} 
@@ -704,6 +1041,19 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                         <Calendar size={12} /> Aula: {dataLicao.split('-').reverse().join('/')}
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => handlePlaySectionAudio('section-header')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-full border transition cursor-pointer ${
+                        activeAudioSectionId === 'section-header' && audioNarration.isPlaying
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-400 ring-2 ring-emerald-300'
+                          : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border-emerald-400/40'
+                      }`}
+                      title="Ouvir introdução e metadados da lição em áudio"
+                    >
+                      <Volume2 size={12} className={activeAudioSectionId === 'section-header' && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                      <span>{activeAudioSectionId === 'section-header' && audioNarration.isPlaying ? 'Ouvindo...' : 'Ouvir Título'}</span>
+                    </button>
                   </div>
 
                   {/* Título e Subtítulo da Revista */}
@@ -748,22 +1098,44 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             {/* 2. TEXTO ÁUREO & VERDADE PRÁTICA */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Texto Áureo */}
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 p-7 sm:p-8 rounded-[2rem] border border-amber-200/70 shadow-sm relative overflow-hidden group">
+              <div 
+                id="ebd-section-golden"
+                className={`bg-gradient-to-br from-amber-50 to-amber-100/50 p-7 sm:p-8 rounded-[2rem] border shadow-sm relative overflow-hidden group transition-all ${
+                  activeAudioSectionId === 'section-golden'
+                    ? 'border-amber-500 ring-4 ring-amber-400/50 scale-[1.01]'
+                    : 'border-amber-200/70'
+                }`}
+              >
                 <div className="absolute top-0 right-0 p-6 text-amber-200/40 select-none">
                   <Quote size={72} className="stroke-[1.5]" />
                 </div>
                 <div className="relative z-10 space-y-3.5">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="inline-flex items-center gap-2 bg-amber-500/15 text-amber-900 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-amber-300/50">
                       <Sparkles size={12} className="text-amber-600" /> Texto Áureo da Lição {cleanLicaoNum}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedBibleRef(parsedMagazine.goldenText)}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                    >
-                      <BookOpen size={12} /> Explicar Versículo
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handlePlaySectionAudio('section-golden')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                          activeAudioSectionId === 'section-golden' && audioNarration.isPlaying
+                            ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-400'
+                            : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-950'
+                        }`}
+                        title="Ouvir Texto Áureo em áudio"
+                      >
+                        <Volume2 size={12} className={activeAudioSectionId === 'section-golden' && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                        <span>{activeAudioSectionId === 'section-golden' && audioNarration.isPlaying ? 'Ouvindo...' : 'Ouvir'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBibleRef(parsedMagazine.goldenText)}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        <BookOpen size={12} /> Explicar Versículo
+                      </button>
+                    </div>
                   </div>
                   <blockquote className="font-serif italic text-base sm:text-lg text-amber-950 leading-relaxed font-semibold">
                     “{parsedMagazine.goldenText}”
@@ -772,14 +1144,36 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               </div>
 
               {/* Verdade Prática */}
-              <div className="bg-gradient-to-br from-emerald-50 to-teal-50/60 p-7 sm:p-8 rounded-[2rem] border border-emerald-200/60 shadow-sm relative overflow-hidden group">
+              <div 
+                id="ebd-section-truth"
+                className={`bg-gradient-to-br from-emerald-50 to-teal-50/60 p-7 sm:p-8 rounded-[2rem] border shadow-sm relative overflow-hidden group transition-all ${
+                  activeAudioSectionId === 'section-truth'
+                    ? 'border-emerald-500 ring-4 ring-emerald-400/50 scale-[1.01]'
+                    : 'border-emerald-200/60'
+                }`}
+              >
                 <div className="absolute top-0 right-0 p-6 text-emerald-200/35 select-none">
                   <Award size={76} className="stroke-[1.3]" />
                 </div>
                 <div className="relative z-10 space-y-3.5">
-                  <span className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-900 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-emerald-300/50">
-                    <Award size={12} className="text-emerald-600" /> Verdade Prática
-                  </span>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-900 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-emerald-300/50">
+                      <Award size={12} className="text-emerald-600" /> Verdade Prática
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handlePlaySectionAudio('section-truth')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        activeAudioSectionId === 'section-truth' && audioNarration.isPlaying
+                          ? 'bg-emerald-600 text-white font-black ring-2 ring-emerald-400'
+                          : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-950'
+                      }`}
+                      title="Ouvir Verdade Prática em áudio"
+                    >
+                      <Volume2 size={12} className={activeAudioSectionId === 'section-truth' && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                      <span>{activeAudioSectionId === 'section-truth' && audioNarration.isPlaying ? 'Ouvindo...' : 'Ouvir'}</span>
+                    </button>
+                  </div>
                   <p className="font-sans text-sm sm:text-base text-slate-800 leading-relaxed font-semibold">
                     {parsedMagazine.practicalTruth}
                   </p>
@@ -788,18 +1182,40 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             </div>
 
             {/* 3. LEITURA BÍBLICA EM CLASSE (TEXTO BÍBLICO ARC INTEGRAL) */}
-            <div className="bg-[#FAF5ED] rounded-[2.5rem] border border-[#E3DAC9] p-7 md:p-10 shadow-inner relative">
+            <div 
+              id="ebd-section-bible"
+              className={`bg-[#FAF5ED] rounded-[2.5rem] border p-7 md:p-10 shadow-inner relative transition-all ${
+                activeAudioSectionId === 'section-bible'
+                  ? 'border-amber-600 ring-4 ring-amber-500/40'
+                  : 'border-[#E3DAC9]'
+              }`}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-[#E3DAC9]">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#8B5A2B] text-[#FCF9F2] text-xs font-black uppercase tracking-wider rounded-full shadow-xs">
                   <Scroll size={14} /> Leitura Bíblica em Classe • {parsedMagazine.bibleRefHeader}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedBibleRef(parsedMagazine.bibleRefHeader)}
-                  className="px-3 py-1.5 rounded-xl bg-[#8B5A2B]/15 hover:bg-[#8B5A2B]/25 text-[#6E451F] text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <BookOpen size={14} /> Ver Comentário Exegético da Passagem
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handlePlaySectionAudio('section-bible')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      activeAudioSectionId === 'section-bible' && audioNarration.isPlaying
+                        ? 'bg-[#8B5A2B] text-white font-black ring-2 ring-amber-400 shadow-sm'
+                        : 'bg-[#8B5A2B]/15 hover:bg-[#8B5A2B]/25 text-[#6E451F]'
+                    }`}
+                    title="Ouvir Leitura Bíblica narrada em áudio"
+                  >
+                    <Volume2 size={13} className={activeAudioSectionId === 'section-bible' && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                    <span>{activeAudioSectionId === 'section-bible' && audioNarration.isPlaying ? 'Ouvindo Leitura...' : 'Ouvir Leitura'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBibleRef(parsedMagazine.bibleRefHeader)}
+                    className="px-3 py-1.5 rounded-xl bg-[#8B5A2B]/15 hover:bg-[#8B5A2B]/25 text-[#6E451F] text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <BookOpen size={14} /> Ver Comentário Exegético
+                  </button>
+                </div>
               </div>
 
               <div className="prose prose-stone max-w-none text-[#3D3026] text-xs sm:text-sm md:text-base whitespace-pre-wrap leading-loose font-serif font-medium bg-white/80 p-5 md:p-7 rounded-2xl border border-[#EBE3D3] shadow-2xs">
@@ -808,14 +1224,36 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             </div>
 
             {/* 4. INTRODUÇÃO CONTEXTUAL, HISTÓRICA E TEOLÓGICA DA LIÇÃO */}
-            <div className="space-y-4 bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-200/80 shadow-xs">
+            <div 
+              id="ebd-section-intro"
+              className={`space-y-4 bg-white p-8 md:p-10 rounded-[2.5rem] border shadow-xs transition-all ${
+                activeAudioSectionId === 'section-intro'
+                  ? 'border-emerald-500 ring-4 ring-emerald-400/40 scale-[1.01]'
+                  : 'border-slate-200/80'
+              }`}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full border border-emerald-200">
                   <BookOpen size={12} /> Introdução & Contextualização da Lição {cleanLicaoNum}
                 </span>
-                <span className="text-[11px] font-bold text-slate-500">
-                  {revista} {trimestre ? `• ${trimestre}` : ''}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handlePlaySectionAudio('section-intro')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      activeAudioSectionId === 'section-intro' && audioNarration.isPlaying
+                        ? 'bg-emerald-600 text-white font-black ring-2 ring-emerald-400'
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    }`}
+                    title="Ouvir Introdução narrada em áudio"
+                  >
+                    <Volume2 size={12} className={activeAudioSectionId === 'section-intro' && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                    <span>{activeAudioSectionId === 'section-intro' && audioNarration.isPlaying ? 'Ouvindo...' : 'Ouvir Introdução'}</span>
+                  </button>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {revista} {trimestre ? `• ${trimestre}` : ''}
+                  </span>
+                </div>
               </div>
               <h3 className="text-xl md:text-2xl font-black font-sans text-slate-900">
                 Visão Geral e Contexto Bíblico-Histórico
@@ -830,14 +1268,36 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             </div>
 
             {/* 5. FUNDAMENTAÇÃO DOUTRINÁRIA (DECLARAÇÃO DE FÉ CGADB / CPAD & EXEGESE LÉXICA) */}
-            <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-950 text-white p-8 md:p-10 rounded-[2.5rem] shadow-xl border border-indigo-800/60 space-y-4">
+            <div 
+              id="ebd-section-doctrinal"
+              className={`bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-950 text-white p-8 md:p-10 rounded-[2.5rem] shadow-xl border space-y-4 transition-all ${
+                activeAudioSectionId === 'section-doctrinal'
+                  ? 'border-amber-400 ring-4 ring-amber-400/40 scale-[1.01]'
+                  : 'border-indigo-800/60'
+              }`}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 bg-indigo-500/25 text-indigo-200 text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full border border-indigo-400/30">
                   <ShieldCheck size={13} className="text-indigo-300" /> Fundamentação Doutrinária Oficial (CGADB / CPAD)
                 </span>
-                <span className="text-xs font-bold text-amber-300">
-                  {parsedMagazine.dogmaticCap}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handlePlaySectionAudio('section-doctrinal')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      activeAudioSectionId === 'section-doctrinal' && audioNarration.isPlaying
+                        ? 'bg-amber-400 text-slate-950 font-black ring-2 ring-amber-300'
+                        : 'bg-white/10 hover:bg-white/20 text-indigo-100 border border-white/20'
+                    }`}
+                    title="Ouvir Fundamentação Doutrinária CGADB / CPAD em áudio"
+                  >
+                    <Volume2 size={12} className={activeAudioSectionId === 'section-doctrinal' && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                    <span>{activeAudioSectionId === 'section-doctrinal' && audioNarration.isPlaying ? 'Ouvindo...' : 'Ouvir Doutrina'}</span>
+                  </button>
+                  <span className="text-xs font-bold text-amber-300">
+                    {parsedMagazine.dogmaticCap}
+                  </span>
+                </div>
               </div>
               <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">
                 {parsedMagazine.dogmaticTitle}
@@ -865,7 +1325,14 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
 
                 return (
                   <div key={index} className="space-y-6">
-                    <div className="bg-white p-7 sm:p-9 md:p-11 rounded-[2.5rem] border border-slate-200/90 shadow-xs space-y-6 relative overflow-hidden">
+                    <div 
+                      id={`ebd-section-topic-${index}`}
+                      className={`bg-white p-7 sm:p-9 md:p-11 rounded-[2.5rem] border shadow-xs space-y-6 relative overflow-hidden transition-all ${
+                        activeAudioSectionId === `section-topic-${index}`
+                          ? 'border-emerald-500 ring-4 ring-emerald-400/40 scale-[1.005]'
+                          : 'border-slate-200/90'
+                      }`}
+                    >
                       {/* Cabeçalho do Tópico */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b-2 border-emerald-100">
                         <div className="flex items-start sm:items-center gap-3.5">
@@ -882,15 +1349,31 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                           </div>
                         </div>
 
-                        {topic.topicRefs && (
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => setSelectedBibleRef(topic.topicRefs.split(';')[0].trim())}
-                            className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                            onClick={() => handlePlaySectionAudio(`section-topic-${index}`)}
+                            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+                              activeAudioSectionId === `section-topic-${index}` && audioNarration.isPlaying
+                                ? 'bg-emerald-600 text-white border-emerald-600 font-black ring-2 ring-emerald-400'
+                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+                            }`}
+                            title={`Ouvir Tópico ${topic.roman} narrado em áudio`}
                           >
-                            <BookOpen size={13} /> {topic.topicRefs}
+                            <Volume2 size={13} className={activeAudioSectionId === `section-topic-${index}` && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                            <span>{activeAudioSectionId === `section-topic-${index}` && audioNarration.isPlaying ? 'Ouvindo Tópico...' : `Ouvir Tópico ${topic.roman}`}</span>
                           </button>
-                        )}
+
+                          {topic.topicRefs && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBibleRef(topic.topicRefs.split(';')[0].trim())}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                            >
+                              <BookOpen size={13} /> {topic.topicRefs}
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Introdução Exegética do Tópico */}
@@ -908,7 +1391,12 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                           {topic.subtopics.map((sub, sIdx) => (
                             <div
                               key={sIdx}
-                              className="p-6 sm:p-7 rounded-3xl bg-slate-50/60 border border-slate-200/90 space-y-4 hover:border-emerald-300/80 transition-all"
+                              id={`ebd-section-subtopic-${index}-${sIdx}`}
+                              className={`p-6 sm:p-7 rounded-3xl bg-slate-50/60 border space-y-4 transition-all ${
+                                activeAudioSectionId === `section-subtopic-${index}-${sIdx}`
+                                  ? 'border-indigo-500 ring-4 ring-indigo-400/40 bg-indigo-50/40'
+                                  : 'border-slate-200/90 hover:border-emerald-300/80'
+                              }`}
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200/70">
                                 <h4 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2.5">
@@ -918,16 +1406,32 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                                   <span>{sub.title}</span>
                                 </h4>
 
-                                {sub.baseRef && (
+                                <div className="flex items-center gap-2">
                                   <button
                                     type="button"
-                                    onClick={() => setSelectedBibleRef(sub.baseRef.split(';')[0].trim())}
-                                    className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
-                                    title="Abrir versículo e comentário exegético"
+                                    onClick={() => handlePlaySectionAudio(`section-subtopic-${index}-${sIdx}`)}
+                                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 cursor-pointer transition ${
+                                      activeAudioSectionId === `section-subtopic-${index}-${sIdx}` && audioNarration.isPlaying
+                                        ? 'bg-indigo-600 text-white border-indigo-600 font-black ring-2 ring-indigo-400'
+                                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200/80'
+                                    }`}
+                                    title={`Ouvir Subtópico ${sub.code} narrado em áudio`}
                                   >
-                                    <Scroll size={12} /> {sub.baseRef}
+                                    <Volume2 size={12} className={activeAudioSectionId === `section-subtopic-${index}-${sIdx}` && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                                    <span>{activeAudioSectionId === `section-subtopic-${index}-${sIdx}` && audioNarration.isPlaying ? 'Ouvindo...' : 'Ouvir'}</span>
                                   </button>
-                                )}
+
+                                  {sub.baseRef && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedBibleRef(sub.baseRef.split(';')[0].trim())}
+                                      className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
+                                      title="Abrir versículo e comentário exegético"
+                                    >
+                                      <Scroll size={12} /> {sub.baseRef}
+                                    </button>
+                                  )}
+                                </div>
                               </div>
 
                               {/* Parágrafos Densos de Exegese do Subtópico */}
@@ -983,7 +1487,14 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
 
                       {/* Síntese Teológica do Tópico */}
                       {topic.synthesis && (
-                        <div className="bg-slate-900 text-white p-5 rounded-2xl flex items-start gap-3">
+                        <div 
+                          id={`ebd-section-synthesis-${index}`}
+                          className={`bg-slate-900 text-white p-5 rounded-2xl flex items-start gap-3 transition-all ${
+                            activeAudioSectionId === `section-synthesis-${index}`
+                              ? 'ring-4 ring-amber-400/50'
+                              : ''
+                          }`}
+                        >
                           <Sparkles size={18} className="text-amber-400 shrink-0 mt-0.5" />
                           <p className="text-xs sm:text-sm font-medium leading-relaxed">
                             <strong className="text-emerald-300 font-black uppercase tracking-wider text-[10px] block mb-0.5">
@@ -1020,9 +1531,31 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
 
             {/* 7. APLICAÇÃO PRÁTICA PASTORAL E MINISTERIAL */}
             {parsedMagazine.application.length > 0 && (
-              <div className="bg-white p-8 md:p-10 rounded-[2.5rem] border border-emerald-200/80 shadow-xs space-y-5">
-                <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full border border-emerald-200">
-                  <Check size={12} /> Aplicação Prática para a Vida Cristã, Família e Igreja
+              <div 
+                id="ebd-section-application"
+                className={`bg-white p-8 md:p-10 rounded-[2.5rem] border shadow-xs space-y-5 transition-all ${
+                  activeAudioSectionId === 'section-application'
+                    ? 'border-emerald-500 ring-4 ring-emerald-400/40 scale-[1.01]'
+                    : 'border-emerald-200/80'
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full border border-emerald-200">
+                    <Check size={12} /> Aplicação Prática para a Vida Cristã, Família e Igreja
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handlePlaySectionAudio('section-application')}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                      activeAudioSectionId === 'section-application' && audioNarration.isPlaying
+                        ? 'bg-emerald-600 text-white border-emerald-600 font-black ring-2 ring-emerald-400'
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+                    }`}
+                    title="Ouvir Aplicação Prática narrada em áudio"
+                  >
+                    <Volume2 size={13} className={activeAudioSectionId === 'section-application' && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                    <span>{activeAudioSectionId === 'section-application' && audioNarration.isPlaying ? 'Ouvindo Aplicação...' : 'Ouvir Aplicação'}</span>
+                  </button>
                 </div>
                 <h3 className="text-xl md:text-2xl font-black text-slate-900">
                   Vivenciando a Lição {cleanLicaoNum} durante a Semana
@@ -1038,9 +1571,31 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             )}
 
             {/* 8. CONCLUSÃO & MENSAGEM PASTORAL */}
-            <div className="bg-gradient-to-br from-emerald-900 to-emerald-950 text-white p-8 md:p-11 rounded-[2.5rem] shadow-xl border border-emerald-800 relative">
-              <div className="absolute -top-3 left-8 px-4 py-1 bg-emerald-400 text-emerald-950 text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm">
-                Conclusão & Síntese Pastoral
+            <div 
+              id="ebd-section-conclusion"
+              className={`bg-gradient-to-br from-emerald-900 to-emerald-950 text-white p-8 md:p-11 rounded-[2.5rem] shadow-xl border relative transition-all ${
+                activeAudioSectionId === 'section-conclusion'
+                  ? 'border-emerald-300 ring-4 ring-emerald-400/50 scale-[1.01]'
+                  : 'border-emerald-800'
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <span className="px-4 py-1 bg-emerald-400 text-emerald-950 text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm">
+                  Conclusão & Síntese Pastoral
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handlePlaySectionAudio('section-conclusion')}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                    activeAudioSectionId === 'section-conclusion' && audioNarration.isPlaying
+                      ? 'bg-emerald-400 text-slate-950 border-emerald-400 font-black ring-2 ring-emerald-300'
+                      : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+                  }`}
+                  title="Ouvir Conclusão da Lição narrada em áudio"
+                >
+                  <Volume2 size={13} className={activeAudioSectionId === 'section-conclusion' && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                  <span>{activeAudioSectionId === 'section-conclusion' && audioNarration.isPlaying ? 'Ouvindo Conclusão...' : 'Ouvir Conclusão'}</span>
+                </button>
               </div>
               <div className="prose prose-invert max-w-none space-y-4">
                 <p className="font-serif italic text-emerald-100 text-sm sm:text-base md:text-lg leading-loose">

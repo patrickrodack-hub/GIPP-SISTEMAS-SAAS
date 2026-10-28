@@ -2,7 +2,8 @@ import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { 
   BookOpen, ChevronRight, ChevronLeft, Award, 
   Loader2, DownloadCloud, Copy, Book, TrendingUp, User, CheckCheck, AlertTriangle, X,
-  Database, Sparkles, Search, Monitor, Check, Zap, RefreshCw
+  Database, Sparkles, Search, Monitor, Check, Zap, RefreshCw,
+  Volume2, VolumeX, Play, Pause, Square, SkipBack, SkipForward, Headphones, Gauge
 } from 'lucide-react';
 
 import { 
@@ -21,6 +22,7 @@ import { BIBLE_BOOKS } from './ModuleDevSuporte';
 import { bibleDatabaseService } from '../services/bibleDatabaseService';
 import { ALL_BIBLE_BOOKS, BibleVerseItem } from '../data/bibliaOfflineData';
 import { holyricsService } from '../services/holyricsService';
+import { useAudioNarration, AudioSegment } from '../hooks/useAudioNarration';
 
 // Mapeamento de Livros em Português para Inglês para a API gratuita bible-api.com
 const PORTUGUESE_TO_ENGLISH_BOOKS: Record<string, string> = {
@@ -176,6 +178,51 @@ const ModuleBiblia = () => {
         }
         return bibleDatabaseService.searchVerses(offlineSearchQuery, 30);
     }, [offlineSearchQuery]);
+
+    // Áudio Narração do Capítulo da Bíblia (Voz natural e acompanhamento de versículos)
+    const [showAudioPlayer, setShowAudioPlayer] = useState<boolean>(false);
+    const [activeAudioVerse, setActiveAudioVerse] = useState<number | null>(null);
+
+    const currentChapterVerses = useMemo(() => {
+        if (!selectedBook || !selectedChapter) return [];
+        return bibleDatabaseService.getChapterVerses(selectedBook.name, selectedChapter);
+    }, [selectedBook, selectedChapter]);
+
+    const audioSegments: AudioSegment[] = useMemo(() => {
+        if (!selectedBook || !selectedChapter || !currentChapterVerses.length) return [];
+        return currentChapterVerses.map((v, i) => ({
+            id: v.verse,
+            label: `${selectedBook.name} ${selectedChapter}:${v.verse}`,
+            sublabel: `Versículo ${v.verse}`,
+            text: i === 0 
+                ? `${selectedBook.name}, capítulo ${selectedChapter}. Versículo 1. ${v.text}` 
+                : `Versículo ${v.verse}. ${v.text}`
+        }));
+    }, [selectedBook, selectedChapter, currentChapterVerses]);
+
+    const audioNarration = useAudioNarration(audioSegments, {
+        onSegmentChange: (seg) => {
+            const vNum = typeof seg.id === 'number' ? seg.id : parseInt(String(seg.id), 10);
+            setActiveAudioVerse(vNum);
+            const el = document.getElementById(`bible-verse-${vNum}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        },
+        onFinish: () => {
+            setActiveAudioVerse(null);
+        }
+    });
+
+    const handlePlayAudioVerse = (vNum: number) => {
+        setShowAudioPlayer(true);
+        const idx = audioSegments.findIndex(s => s.id === vNum);
+        if (idx >= 0) {
+            audioNarration.jumpTo(idx);
+        } else {
+            audioNarration.play(0);
+        }
+    };
 
     const updateCachedChapters = async () => {
         try {
@@ -347,6 +394,10 @@ const ModuleBiblia = () => {
         setSelectedBook(book);
         setSelectedChapter(chapter);
         setHighlightedVerseNumber(targetVerseHighlight || null);
+        setActiveAudioVerse(null);
+        if (audioNarration.isPlaying) {
+            audioNarration.stop();
+        }
         setActiveQuizMode(false);
         setCurrentQuestionIndex(0);
         setSelectedOption(null);
@@ -810,13 +861,17 @@ ${bibleText}
                         const vNum = parseInt(verseMatch[1], 10);
                         const vText = verseMatch[2];
                         const isHighlighted = highlightedVerseNumber === vNum;
+                        const isAudioActive = activeAudioVerse === vNum;
                         const isJustProjected = projectedVerseKey === `${selectedBook?.name}_${selectedChapter}_${vNum}`;
 
                         return (
                             <div
                                 key={idx}
+                                id={`bible-verse-${vNum}`}
                                 className={`group relative rounded-xl p-2.5 -mx-2.5 transition-all border ${
-                                    isHighlighted
+                                    isAudioActive
+                                        ? 'bg-amber-100/95 border-amber-500 shadow-md ring-2 ring-amber-400/60 scale-[1.01]'
+                                        : isHighlighted
                                         ? 'bg-amber-100/90 border-amber-400 shadow-sm'
                                         : isJustProjected
                                         ? 'bg-emerald-50 border-emerald-300'
@@ -825,14 +880,33 @@ ${bibleText}
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <p className="leading-relaxed flex-1">
-                                        <span className="inline-flex items-center justify-center min-w-[26px] h-6 px-1.5 mr-2 rounded-md bg-amber-500/15 text-amber-800 font-sans font-black text-xs select-none border border-amber-500/30">
+                                        <span className={`inline-flex items-center justify-center min-w-[26px] h-6 px-1.5 mr-2 rounded-md font-sans font-black text-xs select-none border transition-all ${
+                                            isAudioActive
+                                                ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-sm animate-pulse'
+                                                : 'bg-amber-500/15 text-amber-800 border-amber-500/30'
+                                        }`}>
                                             {vNum}
                                         </span>
-                                        <span>{vText}</span>
+                                        <span className={isAudioActive ? 'font-semibold text-slate-950' : ''}>{vText}</span>
                                     </p>
 
                                     {!isFullscreen && (
-                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0 font-sans">
+                                        <div className={`transition-opacity flex items-center gap-1 shrink-0 font-sans ${
+                                            isAudioActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                        }`}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handlePlayAudioVerse(vNum)}
+                                                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs cursor-pointer transition-colors ${
+                                                    isAudioActive && audioNarration.isPlaying
+                                                        ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-400'
+                                                        : 'bg-amber-600 hover:bg-amber-700 text-white'
+                                                }`}
+                                                title="Ouvir este versículo narrado em áudio"
+                                            >
+                                                <Volume2 size={11} className={isAudioActive && audioNarration.isPlaying ? 'animate-bounce' : ''} />
+                                                <span>{isAudioActive && audioNarration.isPlaying ? 'Ouvindo...' : 'Ouvir'}</span>
+                                            </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleProjectSingleVerse(vNum, vText)}
@@ -1469,6 +1543,30 @@ ${bibleText}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        setShowAudioPlayer(prev => !prev);
+                                        if (!showAudioPlayer && !audioNarration.isPlaying) {
+                                            audioNarration.play(0);
+                                        }
+                                    }}
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                                        audioNarration.isPlaying
+                                            ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 ring-2 ring-amber-400 font-black'
+                                            : showAudioPlayer
+                                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                            : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 border border-amber-500/30'
+                                    }`}
+                                    title="Ouvir o capítulo em áudio narrado com voz natural e acompanhamento dos versículos"
+                                >
+                                    <Headphones size={12} className={audioNarration.isPlaying ? 'animate-bounce text-slate-950' : 'text-amber-700'} />
+                                    <span>{audioNarration.isPlaying ? 'Ouvindo Áudio...' : 'Ouvir Áudio'}</span>
+                                    {audioNarration.isPlaying && (
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block ml-0.5" />
+                                    )}
+                                </button>
+
+                                <button
+                                    type="button"
                                     onClick={handleProjectEntireChapterToTelao}
                                     className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs cursor-pointer"
                                     title="Carregar todos os versículos deste capítulo como slides no Telão Holyrics"
@@ -1495,6 +1593,170 @@ ${bibleText}
                                 </button>
                             </div>
                         </div>
+
+                        {/* BARRA DO REPRODUTOR DE ÁUDIO BÍBLIA */}
+                        {showAudioPlayer && (
+                            <div className="bg-slate-900 border-b border-amber-500/30 text-white px-4 md:px-8 py-3 shrink-0 z-30 shadow-lg animate-fadeIn font-sans">
+                                <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+                                    {/* Informações do Versículo Atual */}
+                                    <div className="flex items-center gap-3 w-full md:w-auto">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black shrink-0 shadow-md">
+                                            <Headphones size={20} className={audioNarration.isPlaying ? 'animate-pulse' : ''} />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                             <div className="flex items-center gap-2 flex-wrap">
+                                                 <span className="font-serif font-black text-amber-300 text-sm truncate">
+                                                     {selectedBook?.name} {selectedChapter}
+                                                 </span>
+                                                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                                                     Versículo {activeAudioVerse || (audioNarration.currentIndex + 1)} de {audioSegments.length}
+                                                 </span>
+                                                 {audioNarration.isPlaying && (
+                                                     <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                                                         Voz Ativa
+                                                     </span>
+                                                 )}
+                                             </div>
+                                             <p className="text-[11px] text-slate-300 truncate max-w-md mt-0.5">
+                                                 {audioNarration.currentSegment?.text ? audioNarration.currentSegment.text.replace(/^[A-Za-z0-9\s,.:]+:\s*/, '') : 'Pronto para reprodução com voz natural'}
+                                             </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Controles Centrais de Reprodução */}
+                                    <div className="flex items-center gap-2">
+                                         <button
+                                             type="button"
+                                             onClick={audioNarration.prev}
+                                             disabled={audioNarration.currentIndex <= 0}
+                                             className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-amber-300 transition cursor-pointer"
+                                             title="Versículo Anterior"
+                                         >
+                                             <SkipBack size={16} />
+                                         </button>
+
+                                         <button
+                                             type="button"
+                                             onClick={() => {
+                                                 if (audioNarration.isPlaying) {
+                                                     audioNarration.pause();
+                                                 } else if (audioNarration.isPaused) {
+                                                     audioNarration.resume();
+                                                 } else {
+                                                     audioNarration.play();
+                                                 }
+                                             }}
+                                             className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black flex items-center gap-2 shadow-md cursor-pointer transition transform active:scale-95"
+                                             title={audioNarration.isPlaying ? 'Pausar Áudio' : 'Ouvir Áudio'}
+                                         >
+                                             {audioNarration.isPlaying ? (
+                                                 <>
+                                                     <Pause size={16} className="fill-current" />
+                                                     <span className="text-xs">Pausar</span>
+                                                 </>
+                                             ) : (
+                                                 <>
+                                                     <Play size={16} className="fill-current" />
+                                                     <span className="text-xs">Ouvir</span>
+                                                 </>
+                                             )}
+                                         </button>
+
+                                         <button
+                                             type="button"
+                                             onClick={audioNarration.stop}
+                                             disabled={!audioNarration.isPlaying && !audioNarration.isPaused}
+                                             className="p-2 rounded-lg bg-slate-800 hover:bg-red-950 hover:text-red-300 disabled:opacity-30 text-slate-300 transition cursor-pointer"
+                                             title="Parar Reprodução"
+                                         >
+                                             <Square size={16} />
+                                         </button>
+
+                                         <button
+                                             type="button"
+                                             onClick={audioNarration.next}
+                                             disabled={audioNarration.currentIndex >= audioSegments.length - 1}
+                                             className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-amber-300 transition cursor-pointer"
+                                             title="Próximo Versículo"
+                                         >
+                                             <SkipForward size={16} />
+                                         </button>
+                                    </div>
+
+                                    {/* Configurações: Velocidade, Voz e Fechar */}
+                                    <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                                         {/* Seletor de Velocidade */}
+                                         <div className="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+                                             {[0.75, 1.0, 1.25, 1.5, 2.0].map((rate) => (
+                                                 <button
+                                                     key={rate}
+                                                     type="button"
+                                                     onClick={() => audioNarration.changeRate(rate)}
+                                                     className={`px-1.5 py-1 text-[10px] font-bold rounded-md transition cursor-pointer ${
+                                                         audioNarration.playbackRate === rate
+                                                             ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                                                             : 'text-slate-400 hover:text-white'
+                                                     }`}
+                                                 >
+                                                     {rate}x
+                                                 </button>
+                                             ))}
+                                         </div>
+
+                                         {/* Seletor de Voz em Português */}
+                                         {audioNarration.availableVoices.length > 1 && (
+                                             <select
+                                                 value={audioNarration.selectedVoice}
+                                                 onChange={(e) => audioNarration.changeVoice(e.target.value)}
+                                                 className="bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-medium rounded-lg px-2 py-1.5 outline-hidden cursor-pointer max-w-[120px] truncate"
+                                                 title="Voz do Leitor"
+                                             >
+                                                 {audioNarration.availableVoices.map((v) => (
+                                                     <option key={v.name} value={v.name}>
+                                                         {v.name.replace(/Google|Microsoft|pt-BR|pt_BR/gi, '').trim() || v.name}
+                                                     </option>
+                                                 ))}
+                                             </select>
+                                         )}
+
+                                         <button
+                                             type="button"
+                                             onClick={() => {
+                                                 audioNarration.stop();
+                                                 setShowAudioPlayer(false);
+                                             }}
+                                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer ml-1"
+                                             title="Fechar Reprodutor de Áudio"
+                                         >
+                                             <X size={15} />
+                                         </button>
+                                    </div>
+                                </div>
+
+                                {/* Barra de Progresso do Capítulo */}
+                                <div className="max-w-4xl mx-auto mt-2.5">
+                                     <div 
+                                         className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden flex cursor-pointer hover:h-2 transition-all" 
+                                         onClick={(e) => {
+                                             const rect = e.currentTarget.getBoundingClientRect();
+                                             const clickX = e.clientX - rect.left;
+                                             const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+                                             const targetIdx = Math.floor(ratio * audioSegments.length);
+                                             if (targetIdx >= 0 && targetIdx < audioSegments.length) {
+                                                 audioNarration.jumpTo(targetIdx);
+                                             }
+                                         }}
+                                         title="Clique para avançar/retroceder na leitura"
+                                     >
+                                         <div
+                                             className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-300 rounded-full"
+                                             style={{ width: `${audioNarration.progressPercent}%` }}
+                                         />
+                                     </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10">
                             <div className="max-w-3xl mx-auto bg-[#faf8f5] shadow-[0_10px_40px_rgba(0,0,0,0.05)] rounded-sm border border-[#e5e0d8] p-8 md:p-14 relative font-serif">
