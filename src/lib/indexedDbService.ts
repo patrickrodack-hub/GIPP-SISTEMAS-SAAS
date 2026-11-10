@@ -271,6 +271,167 @@ export function preprocessImage(
   });
 }
 
+export interface EBDCoverCandidate {
+  id: string;
+  title: string;
+  coverUrl: string;
+  sourceUrl: string;
+}
+
+export interface CachedEBDCoverResult {
+  cacheKey: string;
+  base64Data: string;
+  originalUrl: string;
+  sourcePortal: string;
+  cachedAt: string;
+  candidates: EBDCoverCandidate[];
+}
+
+/**
+ * Otimiza uma imagem Base64 para formato de capa de revista (600x900 JPEG) antes de gravar no IndexedDB do GIPP.
+ */
+export function optimizeCoverDataUriForCache(
+  dataUri: string,
+  maxWidth = 600,
+  maxHeight = 900,
+  quality = 0.85
+): Promise<string> {
+  if (!dataUri || !dataUri.startsWith('data:image') || typeof document === 'undefined') {
+    return Promise.resolve(dataUri);
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let w = img.width || maxWidth;
+        let h = img.height || maxHeight;
+        if (w > maxWidth || h > maxHeight) {
+          const ratio = Math.min(maxWidth / w, maxHeight / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUri);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch {
+        resolve(dataUri);
+      }
+    };
+    img.onerror = () => resolve(dataUri);
+    img.src = dataUri;
+  });
+}
+
+/**
+ * Busca automaticamente a capa da revista no portal https://escolabiblicadominical.org,
+ * baixa a imagem convertida em Base64 e armazena no cache IndexedDB do GIPP (ChurchAppMediaCache -> media).
+ */
+export async function fetchAndCacheEbdCoverFromEscolaBiblica(params: {
+  revista?: string;
+  subtitulo?: string;
+  trimestre?: string;
+  licaoNum?: string;
+  tituloLicao?: string;
+  editora?: string;
+  autor?: string;
+  directImageUrl?: string;
+  licaoId?: string;
+}): Promise<CachedEBDCoverResult | null> {
+  const slugBase = [params.revista, params.trimestre, params.licaoNum]
+    .filter(Boolean)
+    .join('_')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'revista_ebd_padrao';
+
+  const cacheKey = `ebd_capa_revista_${slugBase}`;
+
+  try {
+    const resp = await fetch('/api/ebd/buscar-capa-online', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        revista: params.revista || '',
+        subtitulo: params.subtitulo || '',
+        trimestre: params.trimestre || '',
+        licaoNum: params.licaoNum || '1',
+        tituloLicao: params.tituloLicao || '',
+        editora: params.editora || 'CPAD',
+        autor: params.autor || '',
+        directImageUrl: params.directImageUrl || ''
+      })
+    });
+
+    if (!resp.ok) {
+      const existingCached = await getMedia(cacheKey);
+      if (existingCached) {
+        return {
+          cacheKey,
+          base64Data: existingCached,
+          originalUrl: params.directImageUrl || 'https://escolabiblicadominical.org',
+          sourcePortal: 'https://escolabiblicadominical.org',
+          cachedAt: new Date().toISOString(),
+          candidates: []
+        };
+      }
+      return null;
+    }
+
+    const data = await resp.json();
+    const rawBase64 = data?.primaryCoverBase64 || '';
+    const primaryUrl = data?.primaryCoverUrl || '';
+    const candidates: EBDCoverCandidate[] = Array.isArray(data?.covers) ? data.covers : [];
+
+    let finalDataToStore = rawBase64 || primaryUrl;
+    if (rawBase64 && rawBase64.startsWith('data:image')) {
+      finalDataToStore = await optimizeCoverDataUriForCache(rawBase64);
+    }
+
+    if (finalDataToStore) {
+      // 1. Gravar no IndexedDB do GIPP sob a chave da revista
+      await storeMedia(cacheKey, finalDataToStore);
+      // 2. Se houver ID da lição, gravar também sob a chave específica da lição
+      if (params.licaoId) {
+        await storeMedia(`ebd_licao_${params.licaoId}_capa`, finalDataToStore);
+      }
+      // 3. Se houver URL original, mapear também pela URL para o componente CachedImage do GIPP
+      if (primaryUrl && primaryUrl.startsWith('http')) {
+        await storeMedia(primaryUrl, finalDataToStore);
+      }
+    }
+
+    return {
+      cacheKey,
+      base64Data: finalDataToStore,
+      originalUrl: primaryUrl,
+      sourcePortal: data?.sourcePortal || 'https://escolabiblicadominical.org',
+      cachedAt: new Date().toISOString(),
+      candidates
+    };
+  } catch (err) {
+    console.warn('[GIPP IndexedDB Cover Cache] Aviso ao buscar/armazenar capa:', err);
+    const fallbackCached = await getMedia(cacheKey);
+    if (fallbackCached) {
+      return {
+        cacheKey,
+        base64Data: fallbackCached,
+        originalUrl: 'https://escolabiblicadominical.org',
+        sourcePortal: 'https://escolabiblicadominical.org',
+        cachedAt: new Date().toISOString(),
+        candidates: []
+      };
+    }
+    return null;
+  }
+}
+
 // ============================================================================
 // CONVERSORES & SERIALIZADORES PARA TEXTO E HTML OFFLINE
 // ============================================================================

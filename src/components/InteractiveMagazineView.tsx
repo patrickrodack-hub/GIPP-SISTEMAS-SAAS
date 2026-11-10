@@ -6,7 +6,7 @@ import {
   Volume2, VolumeX, Play, Pause, Square, SkipBack, SkipForward, Headphones, X,
   FileEdit, Wand2, Copy, FileText, CheckCircle, ChevronLeft, ChevronRight,
   Layers, GraduationCap, Lightbulb, Compass, Bookmark, ListOrdered, Maximize2,
-  Globe, ExternalLink, Search
+  Globe, ExternalLink, Search, Database
 } from 'lucide-react';
 import { BibleReferenceModal } from './BibleReferenceModal';
 import {
@@ -16,6 +16,11 @@ import {
 import { getFormattedBiblePassageARC, parseBiblicalReference } from '../data/bibliaOfflineData';
 import { findBibleReference } from '../data/bibleReferencesData';
 import { useAudioNarration, AudioSegment } from '../hooks/useAudioNarration';
+import {
+  fetchAndCacheEbdCoverFromEscolaBiblica,
+  getMedia,
+  storeMedia
+} from '../lib/indexedDbService';
 
 export interface InteractiveMagazineViewProps {
   lessonText: string;
@@ -241,7 +246,25 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
       return '';
     }
   });
+  const [coverCachedInIdb, setCoverCachedInIdb] = useState<boolean>(false);
+  const [searchingCoverOnline, setSearchingCoverOnline] = useState<boolean>(false);
   const [customNotification, setCustomNotification] = useState<string | null>(null);
+
+  // Carrega a capa salva no cache IndexedDB do GIPP se existir
+  useEffect(() => {
+    let isMounted = true;
+    getMedia(`${storageKeyCustom}_cover`)
+      .then((cachedCover) => {
+        if (isMounted && cachedCover) {
+          setCustomCoverUrl(cachedCover);
+          setCoverCachedInIdb(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [storageKeyCustom]);
 
   const [activeTab, setActiveTab] = useState<'magazine' | 'custom_input' | 'online_source'>(() => {
     try {
@@ -259,6 +282,41 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
   const [onlineSpecificUrl, setOnlineSpecificUrl] = useState<string>('');
   const [onlineSearching, setOnlineSearching] = useState<boolean>(false);
   const [onlineArticles, setOnlineArticles] = useState<any[]>([]);
+
+  // Busca automática de capa online em https://escolabiblicadominical.org com download e cache no IndexedDB do GIPP
+  const handleAutoFetchAndCacheCoverOnline = useCallback(async () => {
+    setSearchingCoverOnline(true);
+    try {
+      const result = await fetchAndCacheEbdCoverFromEscolaBiblica({
+        revista,
+        subtitulo,
+        trimestre,
+        licaoNum,
+        tituloLicao,
+        editora,
+        autor
+      });
+      const resolvedCover = result?.base64Data || result?.originalUrl || '';
+      if (resolvedCover) {
+        setCustomCoverUrl(resolvedCover);
+        await storeMedia(`${storageKeyCustom}_cover`, resolvedCover);
+        setCoverCachedInIdb(true);
+        try {
+          if (resolvedCover.length < 180000) {
+            localStorage.setItem(`${storageKeyCustom}_cover`, resolvedCover);
+          }
+        } catch {}
+        setCustomNotification(
+          'Capa oficial localizada em https://escolabiblicadominical.org, baixada e salva no cache IndexedDB do GIPP!'
+        );
+        setTimeout(() => setCustomNotification(null), 4500);
+      }
+    } catch {
+      // Silencioso
+    } finally {
+      setSearchingCoverOnline(false);
+    }
+  }, [revista, subtitulo, trimestre, licaoNum, tituloLicao, editora, autor, storageKeyCustom]);
 
   const handleSearchEscolaBiblicaOrg = useCallback(async (overrideQuery?: string, overrideUrl?: string) => {
     setOnlineSearching(true);
@@ -291,6 +349,12 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
     }
   }, [onlineSearchQuery, revista, subtitulo, licaoNum, tituloLicao, onlineSpecificUrl, customCoverUrl]);
 
+  // Paginação interativa estilo Flipbook ("folheio de páginas") ou visualização contínua
+  const [readingFormat, setReadingFormat] = useState<'paginated' | 'continuous'>('paginated');
+  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
+  const [flipDirection, setFlipDirection] = useState<'next' | 'prev'>('next');
+  const [flipAnimKey, setFlipAnimKey] = useState<number>(0);
+
   const handleImportFromEscolaBiblicaArticle = useCallback((article: any) => {
     const contentToApply = (article.conteudoCompleto || article.resumo || '').trim();
     if (!contentToApply) return;
@@ -298,6 +362,9 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
     setAppliedCustomContent(contentToApply);
     if (article.capa) {
       setCustomCoverUrl(article.capa);
+      storeMedia(`${storageKeyCustom}_cover`, article.capa)
+        .then(() => setCoverCachedInIdb(true))
+        .catch(() => {});
       try {
         localStorage.setItem(`${storageKeyCustom}_cover`, article.capa);
       } catch {}
@@ -305,15 +372,13 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
     try {
       localStorage.setItem(storageKeyCustom, contentToApply);
     } catch {}
+    setFlipDirection('prev');
+    setFlipAnimKey(prev => prev + 1);
     setCurrentPageIndex(0);
     setActiveTab('magazine');
-    setCustomNotification(`Conteúdo e capa de "${article.titulo}" (escolabiblicadominical.org) aplicados na Revista Paginada!`);
+    setCustomNotification(`Conteúdo e capa de "${article.titulo}" (escolabiblicadominical.org) aplicados e salvos no IndexedDB!`);
     setTimeout(() => setCustomNotification(null), 4500);
   }, [storageKeyCustom]);
-
-  // Paginação interativa estilo revista física ("folhear páginas") ou visualização contínua
-  const [readingFormat, setReadingFormat] = useState<'paginated' | 'continuous'>('paginated');
-  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
 
   const [customNotes, setCustomNotes] = useState<string>(() => {
     try {
@@ -1238,6 +1303,22 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
     return pages;
   }, [parsedMagazine, revista]);
 
+  // Função de Folheio (Flipbook 3D) com direção natural e rolagem suave
+  const handleTurnPage = useCallback((targetIndex: number, scrollTop = false) => {
+    setReadingFormat('paginated');
+    setCurrentPageIndex(prev => {
+      const clamped = Math.max(0, Math.min(magazinePages.length - 1, targetIndex));
+      if (clamped !== prev) {
+        setFlipDirection(clamped > prev ? 'next' : 'prev');
+        setFlipAnimKey(k => k + 1);
+      }
+      return clamped;
+    });
+    if (scrollTop) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [magazinePages.length]);
+
   // Garante que currentPageIndex seja válido quando o conteúdo muda
   useEffect(() => {
     if (currentPageIndex >= magazinePages.length) {
@@ -1245,21 +1326,21 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
     }
   }, [magazinePages.length, currentPageIndex]);
 
-  // Navegação por setas do teclado quando em modo paginado
+  // Navegação por setas do teclado quando em modo paginado (com efeito Flipbook)
   useEffect(() => {
     if (activeTab !== 'magazine' || readingFormat !== 'paginated') return;
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
       if (e.key === 'ArrowRight') {
-        setCurrentPageIndex(prev => Math.min(magazinePages.length - 1, prev + 1));
+        handleTurnPage(currentPageIndex + 1);
       } else if (e.key === 'ArrowLeft') {
-        setCurrentPageIndex(prev => Math.max(0, prev - 1));
+        handleTurnPage(currentPageIndex - 1);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab, readingFormat, magazinePages.length]);
+  }, [activeTab, readingFormat, currentPageIndex, handleTurnPage]);
 
   // Segmentos de Áudio da Lição EBD (sincronizados com as páginas da revista)
   const [showAudioPlayer, setShowAudioPlayer] = useState<boolean>(false);
@@ -1407,7 +1488,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
       setActiveAudioSectionId(sId);
       const targetPage = findPageIndexForSection(sId);
       if (readingFormat === 'paginated') {
-        setCurrentPageIndex(targetPage);
+        handleTurnPage(targetPage);
       }
       setTimeout(() => {
         const el = document.getElementById(`ebd-${sId}`);
@@ -1717,13 +1798,29 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               {readingFormat === 'paginated' && totalPages > 1 && (
                 <button
                   type="button"
-                  onClick={() => setCurrentPageIndex(1)}
+                  onClick={() => handleTurnPage(1)}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 text-xs font-black flex items-center gap-2 shadow-lg transition cursor-pointer"
                 >
-                  <span>Abrir Revista • Ir para Página 2</span>
+                  <span>Folhear Revista • Ir para Página 2</span>
                   <ChevronRight size={16} />
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={handleAutoFetchAndCacheCoverOnline}
+                disabled={searchingCoverOnline}
+                className="gipp-btn gipp-btn-primary px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 text-xs font-black flex items-center gap-2 border border-amber-400/30 transition cursor-pointer"
+                title="Buscar Capa Online em https://escolabiblicadominical.org e salvar no cache IndexedDB do GIPP"
+              >
+                <ImageIcon size={14} className={searchingCoverOnline ? 'animate-spin text-amber-300' : 'text-amber-300'} />
+                <span>{searchingCoverOnline ? 'Baixando Capa...' : 'Buscar Capa Online'}</span>
+                {coverCachedInIdb && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/30 text-emerald-200 text-[9px] font-black">
+                    <Database size={10} /> Cache IDB
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -1755,10 +1852,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             <button
               key={pg.id}
               type="button"
-              onClick={() => {
-                setReadingFormat('paginated');
-                setCurrentPageIndex(idx);
-              }}
+              onClick={() => handleTurnPage(idx)}
               className={`p-4 rounded-2xl border text-left transition flex items-start justify-between gap-3 cursor-pointer ${
                 currentPageIndex === idx && readingFormat === 'paginated'
                   ? 'bg-emerald-50/80 border-emerald-500 ring-2 ring-emerald-500/20'
@@ -2508,18 +2602,21 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
 
   return (
     <div className="flex flex-col h-full bg-slate-100/80 relative">
-      {/* Barra Editorial Superior */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 bg-white border-b border-slate-200 shrink-0">
+      {/* Barra Editorial Superior (.gipp-module-header) */}
+      <div className="gipp-module-header !mb-0 flex flex-wrap items-center justify-between gap-3 !px-6 !py-3.5 bg-white border-b border-slate-200 shrink-0">
         <div className="flex items-center gap-2.5">
           <span className="p-2 bg-emerald-50 rounded-xl text-emerald-600 border border-emerald-200/60">
             <BookOpen size={18} />
           </span>
           <div>
-            <h4 className="font-black text-xs sm:text-sm text-slate-800">
-              Revista Interativa EBD • {editora || 'CPAD'} {trimestre ? `• ${trimestre}` : ''}
+            <h4 className="font-black text-xs sm:text-sm text-slate-800 flex items-center gap-2 flex-wrap">
+              <span>Revista Interativa EBD • {editora || 'CPAD'} {trimestre ? `• ${trimestre}` : ''}</span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider">
+                Modo Folheio (Flipbook 3D)
+              </span>
             </h4>
             <p className="text-[11px] text-slate-500 font-medium">
-              Paginação real com 100% do conteúdo: capa, tópicos, subtópicos, subsídios, auxílio ao professor e janela de versículos
+              Folheio didático de páginas com 100% da exegese: capa, tópicos, subtópicos, subsídios, auxílio ao professor e janela de versículos
             </p>
           </div>
         </div>
@@ -2576,7 +2673,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               }`}
             >
               <Sparkles size={14} className={activeTab === 'magazine' ? 'text-amber-300' : 'text-emerald-600'} />
-              <span>Revista Paginada ✨</span>
+              <span>Revista Flipbook ✨</span>
             </button>
 
             <button
@@ -2705,7 +2802,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
         </div>
       )}
 
-      {/* BARRA DE NAVEGAÇÃO E MUDANÇA DE PÁGINAS DA REVISTA */}
+      {/* BARRA DE NAVEGAÇÃO E MUDANÇA DE PÁGINAS DA REVISTA (FLIPBOOK) */}
       {activeTab === 'magazine' && (
         <div className="bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-2.5 shrink-0 z-20 shadow-2xs">
           <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2">
@@ -2713,15 +2810,12 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => {
-                  setReadingFormat('paginated');
-                  setCurrentPageIndex(prev => Math.max(0, prev - 1));
-                }}
+                onClick={() => handleTurnPage(currentPageIndex - 1)}
                 disabled={readingFormat === 'paginated' && currentPageIndex === 0}
                 className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-800 text-xs font-black flex items-center gap-1 transition cursor-pointer border border-slate-200"
               >
                 <ChevronLeft size={15} />
-                <span>Pág. Anterior</span>
+                <span>Folhear Anterior</span>
               </button>
 
               <span className="px-3 py-1.5 rounded-xl bg-emerald-950 text-emerald-300 font-mono text-xs font-black">
@@ -2732,14 +2826,11 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
 
               <button
                 type="button"
-                onClick={() => {
-                  setReadingFormat('paginated');
-                  setCurrentPageIndex(prev => Math.min(magazinePages.length - 1, prev + 1));
-                }}
+                onClick={() => handleTurnPage(currentPageIndex + 1)}
                 disabled={readingFormat === 'paginated' && currentPageIndex >= magazinePages.length - 1}
                 className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-black flex items-center gap-1 transition cursor-pointer shadow-2xs"
               >
-                <span>Próxima Pág.</span>
+                <span>Folhear Próxima</span>
                 <ChevronRight size={15} />
               </button>
             </div>
@@ -2750,10 +2841,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                 <button
                   key={pg.id}
                   type="button"
-                  onClick={() => {
-                    setReadingFormat('paginated');
-                    setCurrentPageIndex(idx);
-                  }}
+                  onClick={() => handleTurnPage(idx)}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
                     readingFormat === 'paginated' && currentPageIndex === idx
                       ? 'bg-emerald-600 text-white font-black shadow-2xs'
@@ -3241,17 +3329,19 @@ Questionário
                             {art.capa && (
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={async () => {
                                   setCustomCoverUrl(art.capa);
                                   try {
+                                    await storeMedia(`${storageKeyCustom}_cover`, art.capa);
+                                    setCoverCachedInIdb(true);
                                     localStorage.setItem(`${storageKeyCustom}_cover`, art.capa);
                                   } catch {}
-                                  setCustomNotification('Capa da revista atualizada a partir de escolabiblicadominical.org!');
+                                  setCustomNotification('Capa da revista baixada de escolabiblicadominical.org e armazenada no cache IndexedDB do GIPP!');
                                   setTimeout(() => setCustomNotification(null), 3500);
                                 }}
                                 className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold transition cursor-pointer"
                               >
-                                Usar Capa
+                                Usar Capa (Cache IDB)
                               </button>
                             )}
                             <button
@@ -3282,7 +3372,7 @@ Questionário
                   </span>
                   <div>
                     <h5 className="font-black text-xs sm:text-sm text-emerald-200">
-                      Revista Paginada Gerada com 100% do Conteúdo Adicionado ({magazinePages.length} Páginas)
+                      Revista Flipbook Gerada com 100% do Conteúdo Adicionado ({magazinePages.length} Páginas)
                     </h5>
                     <p className="text-[11px] text-slate-300">
                       Clique em qualquer versículo destacado no texto para abri-lo na pequena janela dentro da revista.
@@ -3309,33 +3399,83 @@ Questionário
               </div>
             )}
 
-            {/* RENDERIZAÇÃO DAS PÁGINAS DA REVISTA (MODO PAGINADO OU CONTÍNUO) */}
+            {/* RENDERIZAÇÃO DAS PÁGINAS DA REVISTA (MODO FOLHEIO FLIPBOOK 3D OU VISÃO CONTÍNUA) */}
             {readingFormat === 'paginated' ? (
-              <div className="space-y-8">
-                {renderPageByMetadata(activePageMeta)}
+              <div className="gipp-flipbook-stage space-y-8">
+                {/* Palco 3D com pilha de folhas físicas, lombada e animação de folheio */}
+                <div className="gipp-flipbook-stack">
+                  <div
+                    key={`flipbook-sheet-${activePageMeta.id}-${flipAnimKey}`}
+                    className={`gipp-flipbook-sheet p-3 sm:p-5 md:p-7 ${
+                      flipDirection === 'next' ? 'gipp-flip-anim-next' : 'gipp-flip-anim-prev'
+                    }`}
+                  >
+                    {/* Lombada física da revista à esquerda */}
+                    <div className="gipp-flipbook-spine" aria-hidden="true" />
+
+                    {/* Barra superior sutil de progresso de folheio didático */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-amber-900/10 text-[11px] text-slate-500 px-2">
+                      <div className="flex items-center gap-2 font-bold text-slate-700">
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                        <span>Folheio Didático Flipbook • {activePageMeta.shortLabel}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-28 sm:w-36 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
+                            style={{
+                              width: `${Math.round(((currentPageIndex + 1) / Math.max(1, magazinePages.length)) * 100)}%`
+                            }}
+                          />
+                        </div>
+                        <span className="font-mono font-black text-emerald-800 text-[10px]">
+                          {currentPageIndex + 1}/{magazinePages.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Conteúdo fiel à exegese da página atual */}
+                    {renderPageByMetadata(activePageMeta)}
+
+                    {/* Dobra de Página Interativa no canto inferior direito (Page Curl) */}
+                    {currentPageIndex < magazinePages.length - 1 && (
+                      <div className="mt-6 pt-3 border-t border-amber-900/10 flex items-center justify-between gap-3 px-2">
+                        <span className="text-[11px] text-slate-400 italic">
+                          Dica: Use as setas do teclado (← / →) ou clique na dobra ao lado para virar a página
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleTurnPage(currentPageIndex + 1, true)}
+                          className="gipp-page-curl-corner group inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-br from-amber-50 via-amber-100/80 to-emerald-50 hover:from-emerald-100 hover:to-amber-100 border border-amber-300/80 shadow-sm text-xs font-black text-slate-800 cursor-pointer"
+                          title="Clique para virar a folha para a próxima página"
+                        >
+                          <span>Virar Folha: {magazinePages[currentPageIndex + 1].shortLabel}</span>
+                          <ChevronRight size={15} className="text-emerald-700 group-hover:translate-x-0.5 transition-transform" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* RODAPÉ DE MUDANÇA DE PÁGINA (COMO UMA REVISTA REAL) */}
                 <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setCurrentPageIndex(prev => Math.max(0, prev - 1));
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => handleTurnPage(currentPageIndex - 1, true)}
                     disabled={currentPageIndex === 0}
                     className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-800 text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer border border-slate-200"
                   >
                     <ChevronLeft size={16} />
                     <span>
                       {currentPageIndex > 0
-                        ? `Voltar: ${magazinePages[currentPageIndex - 1].shortLabel}`
+                        ? `Folhear Anterior: ${magazinePages[currentPageIndex - 1].shortLabel}`
                         : 'Início da Revista (Capa)'}
                     </span>
                   </button>
 
                   <div className="text-center">
                     <span className="text-[11px] font-mono font-black uppercase tracking-wider text-emerald-700 block">
-                      Página {currentPageIndex + 1} de {magazinePages.length}
+                      Página {currentPageIndex + 1} de {magazinePages.length} • Modo Folheio
                     </span>
                     <span className="text-xs font-bold text-slate-600">
                       {activePageMeta.fullTitle}
@@ -3344,16 +3484,13 @@ Questionário
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setCurrentPageIndex(prev => Math.min(magazinePages.length - 1, prev + 1));
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => handleTurnPage(currentPageIndex + 1, true)}
                     disabled={currentPageIndex >= magazinePages.length - 1}
                     className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-40 text-white text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer shadow-md"
                   >
                     <span>
                       {currentPageIndex < magazinePages.length - 1
-                        ? `Avançar: ${magazinePages[currentPageIndex + 1].shortLabel}`
+                        ? `Folhear Próxima: ${magazinePages[currentPageIndex + 1].shortLabel}`
                         : 'Fim da Revista'}
                     </span>
                     <ChevronRight size={16} />

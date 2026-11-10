@@ -38,7 +38,7 @@ import {
   getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged 
 } from 'firebase/auth';
 
-import { preprocessImage, storeMedia, getMedia, clearMedia } from './lib/indexedDbService';
+import { preprocessImage, storeMedia, getMedia, clearMedia, fetchAndCacheEbdCoverFromEscolaBiblica, EBDCoverCandidate } from './lib/indexedDbService';
 import { GippDocsIcon, GippSheetsIcon } from './components/GippOfficeIcons';
 import { 
     GoogleGLogo, GoogleMeetIcon, GoogleSheetsIcon, GoogleDocsIcon, 
@@ -3362,6 +3362,9 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
     const [tempMember, setTempMember] = useState({ id: '', funcao: '' });
     const [loadingAiPlan, setLoadingAiPlan] = useState(false);
     const [loadingEbdOnline, setLoadingEbdOnline] = useState(false);
+    const [loadingEbdCoverOnline, setLoadingEbdCoverOnline] = useState(false);
+    const [ebdCoverCandidates, setEbdCoverCandidates] = useState<EBDCoverCandidate[]>([]);
+    const [ebdCoverCachedKey, setEbdCoverCachedKey] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
 
     // Crescimento Eclesiástico States
@@ -4527,6 +4530,51 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                     });
                 };
 
+                const handleSearchEbdCoverOnline = async (directUrl?: string) => {
+                    const revQuery = String(data.revista || '').trim();
+                    const subQuery = String(data.subtitulo || '').trim();
+                    const titQuery = String(resolvedTituloLicao || '').trim();
+                    if (!directUrl && !revQuery && !titQuery) {
+                        addToast("Informe o Título da Revista ou o Título da Lição para buscar e armazenar a capa de escolabiblicadominical.org no IndexedDB.", "warning");
+                        return;
+                    }
+                    setLoadingEbdCoverOnline(true);
+                    try {
+                        const cachedCover = await fetchAndCacheEbdCoverFromEscolaBiblica({
+                            revista: revQuery || titQuery,
+                            subtitulo: subQuery,
+                            trimestre: data.trimestre || '1º Trimestre 2026',
+                            licaoNum: String(resolvedNumeroLicao),
+                            tituloLicao: titQuery,
+                            editora: data.editora || 'CPAD',
+                            autor: data.autor || '',
+                            directImageUrl: directUrl || '',
+                            licaoId: data.id || undefined
+                        });
+
+                        if (cachedCover && cachedCover.base64Data) {
+                            setData((prev: any) => ({
+                                ...prev,
+                                capa: cachedCover.base64Data,
+                                capa_cache_key: cachedCover.cacheKey,
+                                capa_fonte_url: cachedCover.originalUrl || 'https://escolabiblicadominical.org'
+                            }));
+                            setEbdCoverCachedKey(cachedCover.cacheKey);
+                            if (cachedCover.candidates && cachedCover.candidates.length > 0) {
+                                setEbdCoverCandidates(cachedCover.candidates);
+                            }
+                            addToast("Capa da revista encontrada em escolabiblicadominical.org, baixada e armazenada no cache IndexedDB do GIPP!", "success");
+                        } else {
+                            addToast("Não foi possível baixar a capa automaticamente. Verifique o título ou importe do computador.", "warning");
+                        }
+                    } catch (err) {
+                        console.warn("[EBD Cover Online IndexedDB]", err);
+                        addToast("Erro ao buscar e armazenar capa no IndexedDB.", "warning");
+                    } finally {
+                        setLoadingEbdCoverOnline(false);
+                    }
+                };
+
                 const handleSearchEbdLessonMetadataOnline = async () => {
                     const revQuery = String(data.revista || '').trim();
                     const subQuery = String(data.subtitulo || '').trim();
@@ -4538,20 +4586,40 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                     setLoadingEbdOnline(true);
                     try {
                         const turmaNome = db.ebd?.turmas?.find((t: any) => t.id === data.turma_id)?.nome || 'Adultos';
-                        const res = await fetch('/api/ebd/pesquisar-revista', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
+                        const [res, coverCacheRes] = await Promise.all([
+                            fetch('/api/ebd/pesquisar-revista', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    revista: revQuery || titQuery,
+                                    temaCentral: subQuery,
+                                    licaoNum: resolvedNumeroLicao,
+                                    tituloLicao: titQuery,
+                                    editora: data.editora || 'CPAD',
+                                    autor: data.autor || '',
+                                    trimestre: data.trimestre || '1º Trimestre 2026',
+                                    publico: turmaNome
+                                })
+                            }),
+                            fetchAndCacheEbdCoverFromEscolaBiblica({
                                 revista: revQuery || titQuery,
-                                temaCentral: subQuery,
-                                licaoNum: resolvedNumeroLicao,
+                                subtitulo: subQuery,
+                                trimestre: data.trimestre || '1º Trimestre 2026',
+                                licaoNum: String(resolvedNumeroLicao),
                                 tituloLicao: titQuery,
                                 editora: data.editora || 'CPAD',
                                 autor: data.autor || '',
-                                trimestre: data.trimestre || '1º Trimestre 2026',
-                                publico: turmaNome
+                                licaoId: data.id || undefined
                             })
-                        });
+                        ]);
+
+                        if (coverCacheRes?.candidates && coverCacheRes.candidates.length > 0) {
+                            setEbdCoverCandidates(coverCacheRes.candidates);
+                        }
+                        if (coverCacheRes?.cacheKey) {
+                            setEbdCoverCachedKey(coverCacheRes.cacheKey);
+                        }
+
                         if (res.ok) {
                             const json = await res.json();
                             const mag = json?.primaryMagazine;
@@ -4564,6 +4632,8 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                 const formattedCombined = nextTitle
                                     ? `Lição ${resolvedNumeroLicao} - ${nextTitle}`
                                     : `Lição ${resolvedNumeroLicao}`;
+
+                                const downloadedCover = coverCacheRes?.base64Data || mag.capa || null;
 
                                 setData((prev: any) => ({
                                     ...prev,
@@ -4579,9 +4649,10 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                     leitura_biblica: prev.leitura_biblica || matchedLesson?.leitura || '',
                                     texto_aureo: prev.texto_aureo || matchedLesson?.aureo || '',
                                     verdade_pratica: prev.verdade_pratica || matchedLesson?.verdade || '',
-                                    capa: mag.capa || prev.capa || null
+                                    capa: downloadedCover || prev.capa || null,
+                                    capa_cache_key: coverCacheRes?.cacheKey || prev.capa_cache_key || ''
                                 }));
-                                addToast("Dados da revista, subsídios e capa sincronizados via escolabiblicadominical.org & CPAD!", "success");
+                                addToast("Dados da revista, subsídios e capa baixada de escolabiblicadominical.org armazenados no IndexedDB do GIPP!", "success");
                             } else {
                                 addToast("Nenhuma correspondência online encontrada. Você pode preencher manualmente ou importar a capa do computador.", "info");
                             }
@@ -4770,17 +4841,24 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                             </div>
                         </div>
 
-                        {/* BLOCO 3: IMAGEM DA CAPA DA LIÇÃO / REVISTA (ONLINE OU IMPORTAR DO COMPUTADOR) */}
+                        {/* BLOCO 3: IMAGEM DA CAPA DA LIÇÃO / REVISTA (ONLINE VIA ESCOLABIBLICADOMINICAL.ORG -> INDEXEDDB OU IMPORTAR DO COMPUTADOR) */}
                         <div className="p-4 bg-slate-50/80 border border-slate-200/90 rounded-2xl space-y-3">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                                 <label className="block text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                                    <ImageIcon size={15} className="text-emerald-600" /> 3. Imagem da Capa da Lição / Revista
+                                    <ImageIcon size={15} className="text-emerald-600" /> 3. Imagem da Capa da Lição / Revista (Fonte: escolabiblicadominical.org)
                                 </label>
-                                {data.capa && (
-                                    <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                                        <CheckCircle size={12} /> Capa Carregada
-                                    </span>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {(ebdCoverCachedKey || data.capa_cache_key || (data.capa && String(data.capa).startsWith('data:image'))) && (
+                                        <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-black flex items-center gap-1">
+                                            <Database size={11} /> Salva no Cache IndexedDB GIPP
+                                        </span>
+                                    )}
+                                    {data.capa && (
+                                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                                            <CheckCircle size={12} /> Capa Carregada
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
@@ -4801,33 +4879,38 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                     </label>
                                 </div>
 
-                                {/* Ações de Importação do Computador ou Busca Online */}
+                                {/* Ações de Importação do Computador ou Busca Automática Online em escolabiblicadominical.org */}
                                 <div className="flex-1 w-full space-y-2.5">
                                     <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
-                                        Caso a capa da revista ou lição não seja encontrada online, importe a imagem diretamente do seu computador ou celular para garantir exibição fiel para toda a turma.
+                                        Clique em <strong>Buscar Capa Online</strong> para localizar automaticamente a capa em <strong>https://escolabiblicadominical.org</strong>, baixar a imagem e armazená-la no cache <strong>IndexedDB do GIPP</strong> para acesso rápido e offline.
                                     </p>
 
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <label className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-xs transition">
-                                            <UploadCloud size={15} />
-                                            Importar Capa do Computador
-                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa')} />
-                                        </label>
-
                                         <button
                                             type="button"
-                                            onClick={handleSearchEbdLessonMetadataOnline}
-                                            disabled={loadingEbdOnline}
-                                            className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+                                            id="btn-buscar-capa-online"
+                                            onClick={() => handleSearchEbdCoverOnline()}
+                                            disabled={loadingEbdCoverOnline || loadingEbdOnline}
+                                            className="gipp-btn gipp-btn-primary !py-2 !px-3.5 !text-[11px] uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                            title="Busca a capa em https://escolabiblicadominical.org, baixa e grava no cache IndexedDB do GIPP"
                                         >
-                                            {loadingEbdOnline ? <Loader2 size={14} className="animate-spin text-emerald-600" /> : <Search size={14} className="text-emerald-600" />}
-                                            Buscar Capa Online
+                                            {loadingEbdCoverOnline ? <Loader2 size={14} className="animate-spin text-white" /> : <Search size={14} className="text-amber-300" />}
+                                            {loadingEbdCoverOnline ? 'Baixando p/ IndexedDB...' : 'Buscar Capa Online (escolabiblicadominical.org)'}
                                         </button>
+
+                                        <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-2xs transition">
+                                            <UploadCloud size={15} className="text-indigo-600" />
+                                            Importar do Computador
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa')} />
+                                        </label>
 
                                         {data.capa && (
                                             <button
                                                 type="button"
-                                                onClick={() => setData({ ...data, capa: null })}
+                                                onClick={() => {
+                                                    setData({ ...data, capa: null, capa_cache_key: '' });
+                                                    setEbdCoverCachedKey('');
+                                                }}
                                                 className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 transition cursor-pointer"
                                             >
                                                 <Trash2 size={13} /> Remover
@@ -4835,15 +4918,47 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                         )}
                                     </div>
 
-                                    <div className="pt-1">
+                                    <div className="pt-1 flex gap-2">
                                         <input
                                             type="url"
                                             value={data.capa && String(data.capa).startsWith('http') ? data.capa : ''}
                                             onChange={e => setData({ ...data, capa: e.target.value.trim() || null })}
-                                            placeholder="Ou cole aqui o link (URL) direto da imagem da capa..."
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
+                                            placeholder="Ou cole o link (URL) da capa de escolabiblicadominical.org para baixar ao IndexedDB..."
+                                            className="gipp-input !py-1.5 !px-3 !text-xs flex-1"
                                         />
+                                        {data.capa && String(data.capa).startsWith('http') && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSearchEbdCoverOnline(String(data.capa))}
+                                                disabled={loadingEbdCoverOnline}
+                                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider shrink-0 cursor-pointer"
+                                            >
+                                                Cachear URL
+                                            </button>
+                                        )}
                                     </div>
+
+                                    {/* Galeria de Capas Encontradas em escolabiblicadominical.org */}
+                                    {ebdCoverCandidates.length > 1 && (
+                                        <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+                                                Capas encontradas em escolabiblicadominical.org (clique para baixar ao IndexedDB):
+                                            </span>
+                                            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                                                {ebdCoverCandidates.map((cand, idx) => (
+                                                    <button
+                                                        key={cand.id || idx}
+                                                        type="button"
+                                                        onClick={() => handleSearchEbdCoverOnline(cand.coverUrl)}
+                                                        className="group relative w-12 h-16 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-indigo-600 shrink-0 transition cursor-pointer shadow-2xs"
+                                                        title={`${cand.title} (Baixar e salvar no IndexedDB)`}
+                                                    >
+                                                        <img src={cand.coverUrl} alt={cand.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -19444,6 +19559,7 @@ export default function App() {
                 if (safeData.foto) await storeMedia(`membro_${savedId}_foto`, safeData.foto);
                 if (safeData.logo) await storeMedia(`congregacao_${savedId}_logo`, safeData.logo);
                 if (safeData.imagem) await storeMedia(`agenda_${savedId}_imagem`, safeData.imagem);
+                if (safeData.capa) await storeMedia(`ebd_licao_${savedId}_capa`, safeData.capa);
             } catch (err) {
                 console.warn("Erro ao registar cache IndexedDB pós-guardar:", err);
             }

@@ -2034,6 +2034,165 @@ async function fetchEBDSubsidiesFromBooksIndex(params: {
 }
 
 /**
+ * Faz o download de uma imagem externa (ex: https://escolabiblicadominical.org) e converte em Base64 Data URI
+ * para permitir armazenamento imediato e livre de bloqueios CORS no cache IndexedDB do GIPP.
+ */
+async function downloadImageAsBase64DataUri(imageUrl: string): Promise<string | null> {
+    if (!imageUrl || !imageUrl.startsWith('http')) return null;
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const resp = await fetch(imageUrl, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; GIPPSystem/2.5; +https://escolabiblicadominical.org)',
+                'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+            }
+        });
+        clearTimeout(timeout);
+        if (!resp.ok) return null;
+        const contentType = resp.headers.get('content-type') || 'image/jpeg';
+        if (!contentType.startsWith('image/')) return null;
+        const arrayBuf = await resp.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        if (buf.length < 200 || buf.length > 6 * 1024 * 1024) return null;
+        return `data:${contentType.split(';')[0]};base64,${buf.toString('base64')}`;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Rota dedicada para a opção 'Buscar Capa Online' utilizando https://escolabiblicadominical.org como fonte,
+ * baixando a imagem em Base64 para armazenamento direto no cache IndexedDB do GIPP.
+ */
+app.post("/api/ebd/buscar-capa-online", async (req, res) => {
+    const start = Date.now();
+    try {
+        const {
+            revista = '',
+            subtitulo = '',
+            trimestre = '',
+            licaoNum = '1',
+            tituloLicao = '',
+            editora = 'CPAD',
+            autor = '',
+            directImageUrl = ''
+        } = req.body || {};
+
+        const cleanQuery = [revista, tituloLicao, subtitulo, trimestre].filter(Boolean).join(' ').trim() || 'Revista EBD Lições Bíblicas';
+
+        // Se o usuário clicou para baixar uma URL específica da galeria de capas encontradas
+        if (directImageUrl && String(directImageUrl).startsWith('http')) {
+            const base64Img = await downloadImageAsBase64DataUri(String(directImageUrl).trim());
+            return res.json({
+                success: true,
+                sourcePortal: 'https://escolabiblicadominical.org',
+                primaryCoverUrl: String(directImageUrl).trim(),
+                primaryCoverBase64: base64Img,
+                covers: [
+                    {
+                        id: `ebd-cover-direct-${Date.now()}`,
+                        title: String(revista || tituloLicao || 'Capa Revista EBD'),
+                        coverUrl: String(directImageUrl).trim(),
+                        sourceUrl: 'https://escolabiblicadominical.org'
+                    }
+                ]
+            });
+        }
+
+        // 1. Buscar no acervo de postagens e na biblioteca de mídia de https://escolabiblicadominical.org
+        const [ebdOrgResult, wpMediaCovers] = await Promise.all([
+            fetchFromEscolaBiblicaDominicalOrg({
+                query: cleanQuery,
+                revista: String(revista || '').trim(),
+                temaCentral: String(subtitulo || '').trim(),
+                licaoNum: String(licaoNum || '1').trim(),
+                tituloLicao: String(tituloLicao || '').trim()
+            }),
+            (async () => {
+                const foundMedia: Array<{ id: string; title: string; coverUrl: string; sourceUrl: string }> = [];
+                try {
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 4500);
+                    const mediaApiUrl = `https://escolabiblicadominical.org/wp-json/wp/v2/media?search=${encodeURIComponent(cleanQuery)}&media_type=image&per_page=6`;
+                    const resp = await fetch(mediaApiUrl, {
+                        signal: controller.signal,
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (compatible; GIPPSystem/2.5; +https://escolabiblicadominical.org)',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    clearTimeout(timeout);
+                    if (resp.ok) {
+                        const mediaItems: any = await resp.json();
+                        if (Array.isArray(mediaItems)) {
+                            mediaItems.forEach((m: any, idx: number) => {
+                                const srcUrl = m?.media_details?.sizes?.medium_large?.source_url ||
+                                    m?.media_details?.sizes?.large?.source_url ||
+                                    m?.source_url;
+                                if (srcUrl && String(srcUrl).startsWith('http')) {
+                                    foundMedia.push({
+                                        id: `wp-media-${m.id || idx}`,
+                                        title: htmlToStructuredEbdText(m?.title?.rendered || cleanQuery) || `Capa EBD ${idx + 1}`,
+                                        coverUrl: String(srcUrl),
+                                        sourceUrl: m?.link || 'https://escolabiblicadominical.org'
+                                    });
+                                }
+                            });
+                        }
+                    }
+                } catch {
+                    // Silencioso caso endpoint de mídia não retorne
+                }
+                return foundMedia;
+            })()
+        ]);
+
+        const coversMap = new Map<string, { id: string; title: string; coverUrl: string; sourceUrl: string }>();
+
+        wpMediaCovers.forEach(c => {
+            if (c.coverUrl && !coversMap.has(c.coverUrl)) {
+                coversMap.set(c.coverUrl, c);
+            }
+        });
+
+        ebdOrgResult.articles.forEach((art, idx) => {
+            if (art.capa && !coversMap.has(art.capa)) {
+                coversMap.set(art.capa, {
+                    id: art.id || `art-cover-${idx}`,
+                    title: art.titulo,
+                    coverUrl: art.capa,
+                    sourceUrl: art.url || 'https://escolabiblicadominical.org'
+                });
+            }
+        });
+
+        const coversList = Array.from(coversMap.values());
+        const primaryCoverUrl = coversList[0]?.coverUrl || ebdOrgResult.bestCoverUrl || 'https://images.unsplash.com/photo-1504052434569-70ad58565b90?auto=format&fit=crop&w=800&q=80';
+
+        // 2. Baixar a imagem principal como Base64 para gravação direta no IndexedDB do GIPP
+        const primaryCoverBase64 = await downloadImageAsBase64DataUri(primaryCoverUrl);
+
+        const latency = Date.now() - start;
+        trackApiCall("gemini", "Buscar Capa Online (escolabiblicadominical.org -> IndexedDB)", "success", latency, 0, `Capa: ${cleanQuery} (${editora} ${autor})`);
+
+        return res.json({
+            success: true,
+            sourcePortal: "https://escolabiblicadominical.org",
+            primaryCoverUrl,
+            primaryCoverBase64,
+            covers: coversList
+        });
+    } catch (err: any) {
+        return res.status(500).json({
+            success: false,
+            error: "Erro ao buscar capa online em escolabiblicadominical.org: " + (err?.message || '')
+        });
+    }
+});
+
+/**
  * Rota dedicada para consultar o Acervo Online de https://escolabiblicadominical.org
  * Busca revistas, capas, subsídios, tópicos e lições completas diretamente da fonte online.
  */
