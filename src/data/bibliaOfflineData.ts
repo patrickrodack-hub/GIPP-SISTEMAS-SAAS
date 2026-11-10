@@ -453,15 +453,17 @@ export interface ParsedBibleRef {
 
 export function parseBiblicalReference(query: string): ParsedBibleRef | null {
   if (!query || !query.trim()) return null;
-  const rawClean = query.trim();
+  const rawClean = query
+    .replace(/^[("“'\[•\-\s]+|[)"”'\].,;!\?\s]+$/g, '')
+    .replace(/\b(?:cf\.|ver|v\.|leia|compare)\s*/gi, '')
+    .trim();
 
-  // Expressão regular para capturar livro + capítulo + versículo
-  // Suporta "1 Jo 3:16", "João 3:16", "Sl 23:1", "Mt 28 19", "Ap 22:20"
-  const regex = /^([1-3]?\s?[A-Za-zÀ-ÿ]+)\s+(\d+)[\s:,\.]?(\d+)?(?:-(\d+))?$/i;
+  // Expressão regular para capturar livro + capítulo + versículo (suporta ":", ".", ",", "-" e múltiplos versículos como "Gn 1.26,27")
+  const regex = /^([1-3]?\s?[A-Za-zÀ-ÿ\s.]+?)\s*(\d+)(?:[\s:,\.](\d+)[ab]?)?(?:\s*[-–,a]\s*(\d+)[ab]?)?/i;
   const match = rawClean.match(regex);
 
   if (match) {
-    const bookStr = match[1].trim();
+    const bookStr = match[1].replace(/\./g, '').trim();
     const chapter = parseInt(match[2], 10);
     const verse = match[3] ? parseInt(match[3], 10) : undefined;
     const endVerse = match[4] ? parseInt(match[4], 10) : undefined;
@@ -556,9 +558,10 @@ export function getOfflineVerseText(bookName: string, chapter: number, verse: nu
  * Extrai uma passagem bíblica completa (intervalo de versículos ou múltiplas referências separadas por ';')
  * diretamente da base canônica Almeida Revista e Corrigida (ARC - 31.102 versículos).
  */
-export function getFormattedBiblePassageARC(refQuery: string, maxVerses = 16): string {
+export function getFormattedBiblePassageARC(refQuery: string, maxVerses = 24): string {
   if (!refQuery || !refQuery.trim()) return '';
-  const segments = refQuery.split(';').map(s => s.trim()).filter(Boolean);
+  const cleanedRef = refQuery.replace(/^[("“'\[•\-\s]+|[)"”'\]\s]+$/g, '').trim();
+  const segments = cleanedRef.split(';').map(s => s.trim()).filter(Boolean);
   const collectedLines: string[] = [];
   let lastBookName = '';
   let totalVerses = 0;
@@ -567,10 +570,10 @@ export function getFormattedBiblePassageARC(refQuery: string, maxVerses = 16): s
     if (totalVerses >= maxVerses) break;
     // Se o segmento começa apenas com número de capítulo (ex: "6:1-4" após "Efésios 5:22-33")
     const fullSeg = /^\d+\s*[:.]/.test(seg) && lastBookName ? `${lastBookName} ${seg}` : seg;
-    const match = fullSeg.match(/^([1-3]?\s?[A-Za-zÀ-ÿ\s]+?)\s+(\d+)(?:[\s:,\.](\d+))?(?:\s*[-–a]\s*(\d+))?/i);
+    const match = fullSeg.match(/^([1-3]?\s?[A-Za-zÀ-ÿ\s.]+?)\s*(\d+)(?:[\s:,\.](\d+)[ab]?)?(?:\s*[-–,a]\s*(\d+)[ab]?)?/i);
     if (!match) continue;
 
-    const bookCandidate = match[1].trim();
+    const bookCandidate = match[1].replace(/\./g, '').trim();
     const bookInfo = findBibleBook(bookCandidate);
     if (!bookInfo) continue;
 

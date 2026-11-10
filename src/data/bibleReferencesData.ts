@@ -317,25 +317,29 @@ export const findBibleReference = (query: string): BibleReferenceDetail => {
         }
     }
 
-    // 3. Fallback dinâmico consultando a Base Bíblica Completa Offline
+    // 3. Fallback dinâmico consultando a Base Bíblica Completa Offline (suporta versículo único ou intervalo completo)
     const parsed = parseBiblicalReference(query);
     if (parsed) {
       const verses = bibleDatabaseService.getChapterVerses(parsed.book.name, parsed.chapter);
-      const targetVerseNum = parsed.verse || 1;
-      const verseObj = verses.find(v => v.verse === targetVerseNum) || verses[0];
-      const verseText = verseObj ? verseObj.text : `Porque a palavra do Senhor é reta, e todas as suas obras são fiéis.`;
+      const startVerseNum = parsed.verse || 1;
+      const endVerseNum = parsed.endVerse && parsed.endVerse >= startVerseNum ? parsed.endVerse : startVerseNum;
+      const matchedVerses = verses.filter(v => v.verse >= startVerseNum && v.verse <= endVerseNum);
+      const verseText = matchedVerses.length > 0
+        ? matchedVerses.map(v => endVerseNum > startVerseNum ? `${v.verse}. ${v.text}` : v.text).join(' ')
+        : (verses[0]?.text || `Porque a palavra do Senhor é reta, e todas as suas obras são fiéis.`);
+      const rangeLabel = endVerseNum > startVerseNum ? `${startVerseNum}-${endVerseNum}` : String(startVerseNum);
 
       return {
-        reference: `${parsed.book.name} ${parsed.chapter}:${targetVerseNum}`,
+        reference: `${parsed.book.name} ${parsed.chapter}:${rangeLabel}`,
         book: parsed.book.name,
         chapter: parsed.chapter,
-        verses: String(targetVerseNum),
+        verses: rangeLabel,
         testament: parsed.book.testament,
         text: verseText,
-        explanation: `Passagem do livro de ${parsed.book.name}, inserido na divisão dos ${parsed.book.division} do ${parsed.book.testament === 'VT' ? 'Antigo Testamento' : 'Novo Testamento'}. Harmoniza-se integralmente com a Declaração de Fé da CGADB/CPAD.`,
+        explanation: `Passagem sagrada do livro de ${parsed.book.name} (capítulo ${parsed.chapter}, versículo${endVerseNum > startVerseNum ? 's' : ''} ${rangeLabel}), integrante da divisão dos ${parsed.book.division} do ${parsed.book.testament === 'VT' ? 'Antigo Testamento' : 'Novo Testamento'}. Harmoniza-se integralmente com a Declaração de Fé da CGADB/CPAD.`,
         dogmaticTheme: `${parsed.book.division} & Sã Doutrina (ARC)`,
         cgadbChapter: `Declaração de Fé da CGADB - Cap. 1 (As Sagradas Escrituras)`,
-        pastoralApplication: `Medite nesta passagem bíblica sagrada e aplique seus preceitos na oração, na vida diária, no testemunho cristão e no ministério eclesiástico.`,
+        pastoralApplication: `Medite nesta passagem bíblica sagrada e aplique seus preceitos na oração, na vida diária, no testemunho cristão e no ensino da Escola Bíblica Dominical.`,
         keywords: [parsed.book.name.toLowerCase(), "bíblia", "arc", "palavra de deus"]
       };
     }

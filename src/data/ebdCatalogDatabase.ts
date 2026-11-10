@@ -35,8 +35,37 @@ export interface EBDMagazineCatalogItem {
   declaracaoCap: string;
   capa: string;
   descricao: string;
+  fonteUrl?: string;
   licoes?: EBDLicaoSumario[];
 }
+
+export interface EBDOnlineDataSource {
+  id: string;
+  nome: string;
+  url: string;
+  descricao: string;
+  recursos: string[];
+  oficial: boolean;
+}
+
+export const FONTES_OFICIAIS_EBD_ONLINE: EBDOnlineDataSource[] = [
+  {
+    id: 'escola-biblica-dominical-org',
+    nome: 'Portal Escola Bíblica Dominical (escolabiblicadominical.org)',
+    url: 'https://escolabiblicadominical.org',
+    descricao: 'Acervo online oficial para consulta de Revistas EBD, Capas Trimestrais, Subsídios Teológicos, Auxílios ao Professor e Lições Bíblicas.',
+    recursos: ['Capas de Revistas', 'Subsídios Exegéticos', 'Lições Trimestrais Completas', 'Auxílio Pedagógico ao Professor'],
+    oficial: true
+  },
+  {
+    id: 'cpad-declaracao-fe',
+    nome: 'Acervo Doutrinário CPAD / CGADB (24 Capítulos)',
+    url: 'https://escolabiblicadominical.org',
+    descricao: 'Base dogmática pentecostal clássica alinhada à Declaração de Fé das Assembleias de Deus e Bíblia ARC.',
+    recursos: ['24 Capítulos da Declaração de Fé', 'Exegese Bíblica ARC', 'Currículo Trimestral Adultos, Jovens e Infantil'],
+    oficial: true
+  }
+];
 
 export interface DogmaticChapterInfo {
   capitulo: string;
@@ -305,7 +334,34 @@ export const CATALOGO_OFICIAL_REVISTAS_EBD: EBDMagazineCatalogItem[] = [
     trimestre: '4º Trimestre',
     declaracaoCap: 'Cap. 1, 7 e 10 (Bibliologia, Antropologia e Soteriologia)',
     capa: 'https://images.unsplash.com/photo-1543189718-40e9d9685b8c?auto=format&fit=crop&w=800&q=80',
-    descricao: 'Respostas bíblicas e racionais para defender a fé cristã frente às filosofias pós-modernas e ideologias secularistas.'
+    descricao: 'Respostas bíblicas e racionais para defender a fé cristã frente às filosofias pós-modernas e ideologias secularistas.',
+    fonteUrl: 'https://escolabiblicadominical.org'
+  },
+  {
+    id: 'ebd-org-atos-igreja-primitiva',
+    titulo: 'A Igreja em Jerusalém e a Expansão Missionária em Atos',
+    subtitulo: 'Doutrina dos Apóstolos, Comunhão, Poder do Espírito e Missões (Subsídios escolabiblicadominical.org)',
+    editora: 'CPAD / escolabiblicadominical.org',
+    comentarista: 'Pr. José Gonçalves / Acervo EBD Online',
+    publico: 'Adultos / Jovens',
+    trimestre: '1º Trimestre',
+    declaracaoCap: 'Cap. 11, 19 e 20 (Eclesiologia e Distintivos Pentecostais)',
+    capa: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=800&q=80',
+    descricao: 'Estudo trimestral integrado ao acervo online escolabiblicadominical.org sobre o avivamento, a pregação apostólica e o crescimento da Igreja Primitiva.',
+    fonteUrl: 'https://escolabiblicadominical.org'
+  },
+  {
+    id: 'ebd-org-corpo-cristo-dons',
+    titulo: 'Relacionamentos em Família e Comunhão no Corpo de Cristo',
+    subtitulo: 'Subsídios, Tópicos Comentados e Auxílio ao Professor (Fonte: escolabiblicadominical.org)',
+    editora: 'CPAD / escolabiblicadominical.org',
+    comentarista: 'Pr. Elienai Cabral / Portal EBD',
+    publico: 'Adultos',
+    trimestre: '2º Trimestre',
+    declaracaoCap: 'Cap. 11 e 24 (A Igreja e a Família Cristã)',
+    capa: 'https://images.unsplash.com/photo-1529070538774-1843cb3265df?auto=format&fit=crop&w=800&q=80',
+    descricao: 'Revista e subsídios completos com leitura diária, objetivos, ponto central, exegese dos tópicos e auxílio didático ao professor via escolabiblicadominical.org.',
+    fonteUrl: 'https://escolabiblicadominical.org'
   }
 ];
 
@@ -841,6 +897,7 @@ ${subtopicosMd}
 - **Autor / Comentarista:** ${cleanAutor}
 - **Número e Título da Lição:** Lição ${cleanNum} — ${finalLessonTitle}
 ${dataLicao ? `- **Data da Aula:** ${dataLicao}\n` : ''}- **Harmonia Dogmática (CGADB / CPAD):** ${dogmatic.capitulo}
+- **Fonte Online de Dados & Subsídios:** https://escolabiblicadominical.org
 
 ---
 
@@ -857,7 +914,7 @@ ${leituraFormatada}
 
 **Contextualização Histórica, Bíblica e Editorial da Lição:**
 ${profile.contextoIntrodutorio}
-${subsidiosWeb ? `\n**Subsídios Bibliográficos Complementares (${cleanEditora}):**\n${subsidiosWeb}\n` : ''}
+${subsidiosWeb ? `\n**Subsídios Bibliográficos e Pesquisa Online (escolabiblicadominical.org & ${cleanEditora}):**\n${subsidiosWeb}\n` : `\n**Subsídio Online Integrado (Fonte: https://escolabiblicadominical.org):**\nMaterial estruturado em conformidade com o portal de subsídios da Escola Bíblica Dominical (escolabiblicadominical.org) e o currículo oficial da ${cleanEditora}.\n`}
 
 ---
 

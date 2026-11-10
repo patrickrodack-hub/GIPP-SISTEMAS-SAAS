@@ -4579,9 +4579,9 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                     leitura_biblica: prev.leitura_biblica || matchedLesson?.leitura || '',
                                     texto_aureo: prev.texto_aureo || matchedLesson?.aureo || '',
                                     verdade_pratica: prev.verdade_pratica || matchedLesson?.verdade || '',
-                                    capa: prev.capa || mag.capa || null
+                                    capa: mag.capa || prev.capa || null
                                 }));
-                                addToast("Dados da revista, subsídios da lição e capa sincronizados com sucesso!", "success");
+                                addToast("Dados da revista, subsídios e capa sincronizados via escolabiblicadominical.org & CPAD!", "success");
                             } else {
                                 addToast("Nenhuma correspondência online encontrada. Você pode preencher manualmente ou importar a capa do computador.", "info");
                             }
@@ -4604,15 +4604,27 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                                     <BookOpen size={15} className="text-emerald-600" /> 1. Dados da Revista, Trimestre & Turma
                                 </h4>
-                                <button
-                                    type="button"
-                                    onClick={handleSearchEbdLessonMetadataOnline}
-                                    disabled={loadingEbdOnline}
-                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-                                >
-                                    {loadingEbdOnline ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
-                                    {loadingEbdOnline ? 'Buscando Online...' : 'Buscar Dados & Capa Online'}
-                                </button>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <a
+                                        href="https://escolabiblicadominical.org"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition"
+                                        title="Abrir site oficial https://escolabiblicadominical.org"
+                                    >
+                                        <Globe size={12} className="text-amber-700" />
+                                        <span>escolabiblicadominical.org</span>
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={handleSearchEbdLessonMetadataOnline}
+                                        disabled={loadingEbdOnline}
+                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                                    >
+                                        {loadingEbdOnline ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
+                                        {loadingEbdOnline ? 'Buscando Online...' : 'Buscar Dados & Capa Online'}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -4661,11 +4673,12 @@ export const GenericModal = ({ isOpen, onClose, type, data, setData, onSave }) =
                                     className="!mb-0"
                                 />
                                 <FormSelect
-                                    label="Editora"
+                                    label="Editora / Fonte de Dados"
                                     value={data.editora || 'CPAD'}
                                     onChange={v => setData({ ...data, editora: v })}
                                     options={[
-                                        { label: 'CPAD (Assembleias de Deus)', value: 'CPAD' },
+                                        { label: 'CPAD + escolabiblicadominical.org', value: 'CPAD' },
+                                        { label: 'escolabiblicadominical.org (Portal EBD)', value: 'escolabiblicadominical.org / CPAD' },
                                         { label: 'Editora Betel', value: 'Editora Betel' },
                                         { label: 'Editora Central Gospel', value: 'Central Gospel' },
                                         { label: 'Editora Cristã Evangélica', value: 'Cristã Evangélica' },

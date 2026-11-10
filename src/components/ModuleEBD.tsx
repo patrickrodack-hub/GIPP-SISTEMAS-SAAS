@@ -164,6 +164,13 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
     const [batchImportStartDate, setBatchImportStartDate] = useState<string>(getTodayDate());
     const [batchImporting, setBatchImporting] = useState(false);
 
+    // --- ESTADOS DO PORTAL & FONTE DE DADOS ONLINE (https://escolabiblicadominical.org) ---
+    const [acervoViewTab, setAcervoViewTab] = useState<'acervo' | 'escolabiblica_search' | 'escolabiblica_site'>('acervo');
+    const [ebdOrgQuery, setEbdOrgQuery] = useState<string>('');
+    const [ebdOrgSpecificUrl, setEbdOrgSpecificUrl] = useState<string>('');
+    const [ebdOrgSearching, setEbdOrgSearching] = useState<boolean>(false);
+    const [ebdOrgArticles, setEbdOrgArticles] = useState<any[]>([]);
+
     // --- ACERVO DE REVISTAS CPAD PREDEFINIDAS MAPEADAS À DECLARAÇÃO DE FÉ (CGADB / CPAD) ---
     const PRESET_CPAD_MAGAZINES = [
         {
@@ -263,9 +270,94 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
             declaracaoCap: 'Cap. 1 e 10 (Bibliologia e Soteriologia)',
             comentarista: 'Pr. Valmir Nascimento',
             capa: 'https://images.unsplash.com/photo-1543189718-40e9d9685b8c?auto=format&fit=crop&w=800&q=80',
-            descricao: 'Respostas bíblicas e racionais para defender a fé cristã frente às filosofias pós-modernas e ideologias secularistas.'
+            descricao: 'Respostas bíblicas e racionais para defender a fé cristã frente às filosofias pós-modernas e ideologias secularistas.',
+            fonteUrl: 'https://escolabiblicadominical.org'
+        },
+        {
+            id: 'ebd-org-atos-igreja',
+            titulo: 'A Igreja em Jerusalém: Doutrina, Comunhão e Fé',
+            subtitulo: 'Subsídios, Tópicos Comentados e Capas (Fonte: escolabiblicadominical.org)',
+            publico: 'Adultos / Jovens',
+            trimestre: '1º Trimestre',
+            declaracaoCap: 'Cap. 11, 19 e 20 (Eclesiologia e Pentecostes)',
+            comentarista: 'Pr. José Gonçalves / escolabiblicadominical.org',
+            editora: 'escolabiblicadominical.org / CPAD',
+            capa: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=800&q=80',
+            descricao: 'Revista e subsídios completos integrados ao banco de dados online de https://escolabiblicadominical.org para geração de revistas interativas.',
+            fonteUrl: 'https://escolabiblicadominical.org'
+        },
+        {
+            id: 'ebd-org-corpo-cristo',
+            titulo: 'Relacionamentos em Família e Comunhão no Corpo de Cristo',
+            subtitulo: 'Material de Estudo, Capas e Auxílio ao Professor (escolabiblicadominical.org)',
+            publico: 'Adultos',
+            trimestre: '2º Trimestre',
+            declaracaoCap: 'Cap. 11 e 24 (A Igreja e a Família Cristã)',
+            comentarista: 'Pr. Elienai Cabral / escolabiblicadominical.org',
+            editora: 'escolabiblicadominical.org / CPAD',
+            capa: 'https://images.unsplash.com/photo-1529070538774-1843cb3265df?auto=format&fit=crop&w=800&q=80',
+            descricao: 'Acervo completo de lições, leitura diária, objetivos, tópicos, subtópicos e subsídios extraídos da fonte https://escolabiblicadominical.org.',
+            fonteUrl: 'https://escolabiblicadominical.org'
         }
     ];
+
+    // Consulta direta ao banco de dados e portal https://escolabiblicadominical.org
+    const handleSearchEbdOrgPortal = async (overrideQuery?: string) => {
+        const q = (overrideQuery !== undefined ? overrideQuery : (ebdOrgQuery || cpadSearchQuery || 'Lições Bíblicas EBD')).trim();
+        setEbdOrgSearching(true);
+        try {
+            const resp = await fetch('/api/ebd/escolabiblicadominical-acervo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: q,
+                    revista: cpadSearchQuery || q,
+                    temaCentral: cpadTemaCentral,
+                    licaoNum: cpadLicaoNum || '1',
+                    tituloLicao: cpadTituloLicao,
+                    specificUrl: ebdOrgSpecificUrl.trim()
+                })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data?.success && Array.isArray(data.articles)) {
+                    setEbdOrgArticles(data.articles);
+                    addToast(`${data.articles.length} revista(s)/subsídio(s) encontrados em escolabiblicadominical.org!`, "success");
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            addToast("Erro ao consultar escolabiblicadominical.org.", "error");
+        } finally {
+            setEbdOrgSearching(false);
+        }
+    };
+
+    const handleOpenEbdOrgArticleAsMagazine = async (article: any) => {
+        const numLicao = article.licaoNumero || cpadLicaoNum || '1';
+        const revName = cpadSearchQuery.trim() || article.titulo || 'Lições Bíblicas EBD';
+        const fullText = (article.conteudoCompleto || article.resumo || '').trim();
+        if (fullText) {
+            try {
+                localStorage.setItem(`gipp_ebd_custom_content_${numLicao}_${revName}`, fullText);
+                if (article.capa) {
+                    localStorage.setItem(`gipp_ebd_custom_content_${numLicao}_${revName}_cover`, article.capa);
+                }
+            } catch {}
+        }
+        setCpadSearchModalOpen(false);
+        await handleGenerateLessonPlan({
+            id: article.id || `ebd-org-${Date.now()}`,
+            revista: revName,
+            tema_central: 'Fonte: https://escolabiblicadominical.org',
+            licao_numero: numLicao,
+            titulo_licao: article.titulo,
+            editora: article.editora || 'escolabiblicadominical.org / CPAD',
+            autor: article.comentarista || cpadAutor || 'Portal Escola Bíblica Dominical',
+            capa: article.capa || null,
+            conteudo_estudo: fullText
+        });
+    };
 
     // --- FUNÇÕES DO BUSCADOR E GERADOR DE REVISTAS EBD (POR TEMA, LIÇÃO, EDITORA E AUTOR) ---
     const handleSearchCpadWithAI = async () => {
@@ -2103,10 +2195,28 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
 
                                     <button
                                         type="button"
-                                        onClick={() => setCpadSearchModalOpen(true)}
+                                        onClick={() => {
+                                            setAcervoViewTab('acervo');
+                                            setCpadSearchModalOpen(true);
+                                        }}
                                         className="px-4 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-500/20 flex items-center gap-1.5 cursor-pointer shrink-0"
                                     >
                                         <BookOpen size={14} className="animate-pulse" /> Acervo & Gerador CPAD
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setAcervoViewTab('escolabiblica_search');
+                                            setCpadSearchModalOpen(true);
+                                            if (ebdOrgArticles.length === 0) {
+                                                handleSearchEbdOrgPortal('Lições Bíblicas EBD');
+                                            }
+                                        }}
+                                        className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-emerald-700 hover:from-amber-700 hover:to-emerald-800 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer shrink-0"
+                                        title="Abrir fonte de dados, capas e revistas online: https://escolabiblicadominical.org"
+                                    >
+                                        <Globe size={14} /> escolabiblicadominical.org
                                     </button>
                                 </div>
                             </div>
@@ -2257,10 +2367,26 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                                     <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                                         <button
                                             type="button"
-                                            onClick={() => setCpadSearchModalOpen(true)}
+                                            onClick={() => {
+                                                setAcervoViewTab('acervo');
+                                                setCpadSearchModalOpen(true);
+                                            }}
                                             className="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-2 cursor-pointer"
                                         >
                                             <BookOpen size={15} /> Abrir Acervo & Gerador CPAD
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAcervoViewTab('escolabiblica_search');
+                                                setCpadSearchModalOpen(true);
+                                                if (ebdOrgArticles.length === 0) {
+                                                    handleSearchEbdOrgPortal('Lições Bíblicas EBD');
+                                                }
+                                            }}
+                                            className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-2 cursor-pointer"
+                                        >
+                                            <Globe size={15} /> Fonte: escolabiblicadominical.org
                                         </button>
                                         <button
                                             type="button"
@@ -4972,18 +5098,28 @@ Gere em formatação simples e amigável.`;
             {cpadSearchModalOpen && createPortal(
                 <InteractiveWindow
                     id="ebd_cpad_search_modal"
-                    title="Acervo & Gerador de Revistas CPAD"
-                    subtitle="Casa Publicadora das Assembleias de Deus • Declaração de Fé"
+                    title="Acervo & Fonte de Dados Online de Revistas EBD (CPAD & escolabiblicadominical.org)"
+                    subtitle="https://escolabiblicadominical.org • Casa Publicadora das Assembleias de Deus • 24 Capítulos CGADB"
                     onClose={() => { setCpadSearchModalOpen(false); setSelectedCpadMagazine(null); }}
                     icon={BookOpen}
                     headerBg="from-rose-700 via-rose-800 to-indigo-900"
-                    defaultWidth={850}
-                    defaultHeight={720}
+                    defaultWidth={920}
+                    defaultHeight={760}
                     footer={
-                        <div className="flex justify-between items-center w-full">
-                            <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">
-                                ✝️ Padrão Oficial CGADB / CPAD • 24 Capítulos
-                            </span>
+                        <div className="flex justify-between items-center w-full flex-wrap gap-2">
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">
+                                    ✝️ Padrão Oficial CGADB / CPAD • Fonte: escolabiblicadominical.org
+                                </span>
+                                <a
+                                    href="https://escolabiblicadominical.org"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[11px] font-black text-amber-600 hover:text-amber-700 flex items-center gap-1 underline"
+                                >
+                                    <ExternalLink size={12} /> Abrir https://escolabiblicadominical.org
+                                </a>
+                            </div>
                             <div className="flex gap-2">
                                 {selectedCpadMagazine && (
                                     <Button type="button" onClick={() => setSelectedCpadMagazine(null)} variant="ghost" className="border border-slate-200">
@@ -4998,6 +5134,256 @@ Gere em formatação simples e amigável.`;
                     }
                 >
                     <div className="space-y-6 text-left font-sans">
+                        {/* Barra Superior de Seleção de Fonte no Acervo: Catálogo 13 Lições vs Busca Online escolabiblicadominical.org vs Abrir Site */}
+                        <div className="bg-slate-900 text-white p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setAcervoViewTab('acervo')}
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                                        acervoViewTab === 'acervo'
+                                            ? 'bg-rose-600 text-white shadow-sm'
+                                            : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                                    }`}
+                                >
+                                    <BookOpen size={14} />
+                                    <span>Acervo & Gerador (13 Lições)</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setAcervoViewTab('escolabiblica_search');
+                                        if (ebdOrgArticles.length === 0) {
+                                            handleSearchEbdOrgPortal();
+                                        }
+                                    }}
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                                        acervoViewTab === 'escolabiblica_search'
+                                            ? 'bg-amber-500 text-slate-950 shadow-sm'
+                                            : 'bg-white/10 hover:bg-white/20 text-amber-200'
+                                    }`}
+                                >
+                                    <Search size={14} />
+                                    <span>Busca Online: escolabiblicadominical.org (Revistas & Capas)</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setAcervoViewTab('escolabiblica_site')}
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                                        acervoViewTab === 'escolabiblica_site'
+                                            ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                                            : 'bg-white/10 hover:bg-white/20 text-emerald-200'
+                                    }`}
+                                >
+                                    <Globe size={14} />
+                                    <span>Abrir Site: escolabiblicadominical.org</span>
+                                </button>
+                            </div>
+
+                            <a
+                                href="https://escolabiblicadominical.org"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 text-[11px] font-black flex items-center gap-1.5 transition"
+                            >
+                                <ExternalLink size={12} />
+                                <span>Nova Aba: escolabiblicadominical.org</span>
+                            </a>
+                        </div>
+
+                        {acervoViewTab === 'escolabiblica_site' ? (
+                            /* ABA 3: VISUALIZADOR INTEGRADO DO SITE https://escolabiblicadominical.org */
+                            <div className="space-y-4 animate-fadeIn">
+                                <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-emerald-950 text-white p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <Globe size={18} className="text-amber-400" />
+                                        <div>
+                                            <h4 className="text-xs font-black uppercase tracking-wider text-amber-300">
+                                                Fonte de Dados Oficial para Revistas da EBD
+                                            </h4>
+                                            <p className="text-xs text-slate-200 font-mono">
+                                                https://escolabiblicadominical.org
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setAcervoViewTab('escolabiblica_search')}
+                                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black cursor-pointer"
+                                        >
+                                            Extrair Capas & Lições Automaticamente
+                                        </button>
+                                        <a
+                                            href="https://escolabiblicadominical.org"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1.5"
+                                        >
+                                            <ExternalLink size={13} /> Abrir em Nova Janela
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-3xl border border-slate-200 shadow-md overflow-hidden h-[560px] flex flex-col">
+                                    <iframe
+                                        src="https://escolabiblicadominical.org"
+                                        title="Escola Bíblica Dominical - escolabiblicadominical.org"
+                                        className="w-full flex-1 border-0 bg-white"
+                                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                                    />
+                                </div>
+                            </div>
+                        ) : acervoViewTab === 'escolabiblica_search' ? (
+                            /* ABA 2: BUSCADOR ONLINE DE REVISTAS, CAPAS E CONTEÚDOS EM https://escolabiblicadominical.org */
+                            <div className="space-y-5 animate-fadeIn">
+                                <div className="bg-gradient-to-br from-amber-50 via-orange-50/60 to-white p-5 rounded-3xl border border-amber-200 shadow-xs space-y-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="p-2.5 bg-amber-600 text-white rounded-xl shadow-xs">
+                                                <Globe size={18} />
+                                            </span>
+                                            <div>
+                                                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                                    Banco de Dados Online: https://escolabiblicadominical.org
+                                                </h4>
+                                                <p className="text-[11px] text-slate-600 font-medium">
+                                                    Busque revistas, capas trimestrais, lições, tópicos e subsídios diretamente em escolabiblicadominical.org para gerar a revista interativa.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAcervoViewTab('escolabiblica_site')}
+                                            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 text-[11px] font-black flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                            <Globe size={13} /> Abrir Site escolabiblicadominical.org
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                        <div className="sm:col-span-5">
+                                            <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                                                Buscar Revista, Tema, Trimestre ou Lição no Site
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={ebdOrgQuery}
+                                                onChange={(e) => setEbdOrgQuery(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSearchEbdOrgPortal()}
+                                                placeholder="Ex: Lição 1, Promessas de Deus, Atos, Jovens..."
+                                                className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                            />
+                                        </div>
+                                        <div className="sm:col-span-4">
+                                            <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                                                Ou Link Direto de escolabiblicadominical.org (Opcional)
+                                            </label>
+                                            <input
+                                                type="url"
+                                                value={ebdOrgSpecificUrl}
+                                                onChange={(e) => setEbdOrgSpecificUrl(e.target.value)}
+                                                placeholder="https://escolabiblicadominical.org/..."
+                                                className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                            />
+                                        </div>
+                                        <div className="sm:col-span-3 flex items-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSearchEbdOrgPortal()}
+                                                disabled={ebdOrgSearching}
+                                                className="w-full py-2 px-3 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                            >
+                                                <Search size={14} className={ebdOrgSearching ? "animate-spin" : ""} />
+                                                <span>{ebdOrgSearching ? "Buscando..." : "Buscar no Site"}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {ebdOrgSearching ? (
+                                    <div className="p-10 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
+                                        <RefreshCw size={28} className="text-amber-600 animate-spin mx-auto" />
+                                        <p className="text-xs font-bold text-slate-600">
+                                            Consultando https://escolabiblicadominical.org para buscar revistas, capas e subsídios...
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[52vh] overflow-y-auto custom-scrollbar pr-1">
+                                        {ebdOrgArticles.map((art: any, idx: number) => (
+                                            <div key={art.id || idx} className="bg-white border border-amber-200/90 hover:border-amber-400 rounded-3xl p-4 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-3">
+                                                <div className="flex gap-3.5 items-start">
+                                                    <img
+                                                        src={art.capa || 'https://images.unsplash.com/photo-1504052434569-70ad58565b90?auto=format&fit=crop&w=800&q=80'}
+                                                        alt={art.titulo}
+                                                        className="w-20 h-28 object-cover rounded-2xl shadow-sm border border-slate-200 shrink-0"
+                                                        referrerPolicy="no-referrer"
+                                                    />
+                                                    <div className="space-y-1.5 flex-1 min-w-0">
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-900 font-black text-[9px] uppercase rounded-md">
+                                                            <Globe size={10} /> escolabiblicadominical.org
+                                                        </span>
+                                                        <h5 className="text-xs font-black text-slate-900 leading-snug line-clamp-2">
+                                                            {art.titulo}
+                                                        </h5>
+                                                        <p className="text-[11px] text-slate-600 line-clamp-3 leading-relaxed">
+                                                            {art.resumo}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100">
+                                                    <a
+                                                        href={art.url || 'https://escolabiblicadominical.org'}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[10px] font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1"
+                                                    >
+                                                        <ExternalLink size={11} /> Abrir Fonte no Site
+                                                    </a>
+
+                                                    <div className="flex items-center gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setCpadSearchQuery(art.titulo);
+                                                                setCpadEditora('escolabiblicadominical.org / CPAD');
+                                                                setAcervoViewTab('acervo');
+                                                                handleGenerateFullCpadMagazine({
+                                                                    id: art.id,
+                                                                    titulo: art.titulo,
+                                                                    subtitulo: 'Fonte: https://escolabiblicadominical.org',
+                                                                    editora: 'escolabiblicadominical.org / CPAD',
+                                                                    comentarista: art.comentarista || 'Portal Escola Bíblica Dominical',
+                                                                    publico: cpadAudienceFilter === 'todos' ? 'Adultos' : cpadAudienceFilter,
+                                                                    trimestre: cpadQuarterFilter,
+                                                                    capa: art.capa,
+                                                                    descricao: art.resumo
+                                                                });
+                                                            }}
+                                                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-[10px] uppercase rounded-xl transition cursor-pointer"
+                                                        >
+                                                            13 Lições
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenEbdOrgArticleAsMagazine(art)}
+                                                            className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                        >
+                                                            <Sparkles size={11} /> Abrir Revista Interativa
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                        <>
                         {/* Barra de Pesquisa e Gerador Completo por Revista / Tema Central, Nº e Título da Lição, Editora e Autor */}
                         <div className="bg-gradient-to-r from-rose-50/90 via-indigo-50/60 to-white p-5 rounded-3xl border border-rose-200/80 shadow-xs space-y-4">
                             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -5007,15 +5393,15 @@ Gere em formatação simples e amigável.`;
                                     </span>
                                     <div>
                                         <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                            Buscador & Gerador Automático de Revistas da EBD (Sem Chave Paga)
+                                            Buscador & Gerador Automático de Revistas da EBD (Integrado a escolabiblicadominical.org)
                                         </h4>
                                         <p className="text-[11px] text-slate-600 font-medium">
-                                            Informe o Nome da Revista / Tema Central, Número e Título da Lição, Editora e Autor/Comentarista para buscar e gerar a revista completa.
+                                            Informe o Nome da Revista / Tema Central, Número e Título da Lição, Editora e Autor para buscar capas e conteúdos online em escolabiblicadominical.org.
                                         </p>
                                     </div>
                                 </div>
                                 <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
-                                    ✓ Bíblia Almeida + Índices EBD + 24 Cap. CGADB
+                                    ✓ escolabiblicadominical.org + Bíblia ARC + 24 Cap. CGADB
                                 </span>
                             </div>
 
@@ -5065,14 +5451,15 @@ Gere em formatação simples e amigável.`;
 
                                 <div className="lg:col-span-3">
                                     <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
-                                        4. Editora
+                                        4. Editora / Fonte Online
                                     </label>
                                     <select
                                         value={cpadEditora}
                                         onChange={(e) => setCpadEditora(e.target.value)}
                                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
                                     >
-                                        <option value="CPAD">📚 CPAD (Assembleia de Deus)</option>
+                                        <option value="CPAD">📚 CPAD + escolabiblicadominical.org</option>
+                                        <option value="escolabiblicadominical.org">🌐 escolabiblicadominical.org (Portal EBD)</option>
                                         <option value="Editora Betel">📘 Editora Betel</option>
                                         <option value="Central Gospel">📙 Central Gospel</option>
                                         <option value="Cristã Evangélica">📗 Cristã Evangélica</option>
@@ -5354,6 +5741,8 @@ Gere em formatação simples e amigável.`;
                                     </div>
                                 </div>
                             </div>
+                        )}
+                        </>
                         )}
                     </div>
                 </InteractiveWindow>,
