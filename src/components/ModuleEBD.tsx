@@ -60,6 +60,7 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
     const [slidesModalOpen, setSlidesModalOpen] = useState(false);
     const [loadingList, setLoadingList] = useState(true);
     const [aiLesson, setAiLesson] = useState<any>(null);
+    const [magazineFullscreen, setMagazineFullscreen] = useState(false);
     const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 7));
     const [congregacaoFilter, setCongregacaoFilter] = useState('todas');
 
@@ -4694,12 +4695,25 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                                     </h3>
                                 </div>
                             </div>
-                            <button 
-                                onClick={() => { setAiLesson(null); setAiQuizText(''); }} 
-                                className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 relative z-10 group shrink-0 ml-3 hover:scale-110 cursor-pointer"
-                            >
-                                <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
-                            </button>
+                            <div className="flex items-center gap-2 relative z-10 shrink-0 ml-3">
+                                {!aiLesson.loading && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setMagazineFullscreen(prev => !prev)}
+                                        className="bg-amber-400/20 hover:bg-amber-400 text-amber-200 hover:text-slate-950 backdrop-blur-md px-3.5 py-2.5 sm:py-3 rounded-2xl font-black text-xs flex items-center gap-2 transition-all duration-300 shadow-lg border border-amber-300/30 cursor-pointer"
+                                        title="Abrir a revista interativa em Tela Cheia para melhor visualização e leitura"
+                                    >
+                                        <Maximize size={16} />
+                                        <span className="hidden sm:inline">Tela Cheia</span>
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={() => { setAiLesson(null); setAiQuizText(''); setMagazineFullscreen(false); }} 
+                                    className="bg-black/30 hover:bg-rose-500 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl text-white/70 hover:text-white transition-all duration-300 shadow-lg border border-white/10 group hover:scale-110 cursor-pointer"
+                                >
+                                    <X size={20} className="group-hover:rotate-90 transition-transform duration-300"/>
+                                </button>
+                            </div>
                         </div>
                         
                         {aiLesson.loading ? (
@@ -4726,9 +4740,12 @@ const ModuleEBD = ({ isProfessorOnly = false }: ModuleEBDProps) => {
                                         textoAureo={aiLesson.textoAureo}
                                         verdadePratica={aiLesson.verdadePratica}
                                         capaUrl={aiLesson.capa}
+                                        initialFullscreen={magazineFullscreen}
+                                        onFullscreenChange={(val) => setMagazineFullscreen(val)}
                                         onRegenerate={aiLesson.rawLicao ? () => handleGenerateLessonPlan(aiLesson.rawLicao, false, true) : undefined}
                                         onEditLesson={aiLesson.rawLicao && aiLesson.rawLicao.id && !String(aiLesson.rawLicao.id).startsWith('ebd-direct-') && !String(aiLesson.rawLicao.id).startsWith('cpad-temp-') ? () => {
                                             const raw = aiLesson.rawLicao;
+                                            setMagazineFullscreen(false);
                                             setAiLesson(null);
                                             openModal('ebd_licao', raw);
                                         } : undefined}

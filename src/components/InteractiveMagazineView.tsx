@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   BookOpen, Sparkles, BookOpenText, Award, 
   Calendar, Check, Quote, Scroll, Image as ImageIcon,
   ShieldCheck, Users, Building2, RefreshCw, Edit3, HelpCircle, CheckCircle2,
   Volume2, VolumeX, Play, Pause, Square, SkipBack, SkipForward, Headphones, X,
   FileEdit, Wand2, Copy, FileText, CheckCircle, ChevronLeft, ChevronRight,
-  Layers, GraduationCap, Lightbulb, Compass, Bookmark, ListOrdered, Maximize2,
-  Globe, ExternalLink, Search, Database
+  Layers, GraduationCap, Lightbulb, Compass, Bookmark, ListOrdered, Maximize2, Minimize2,
+  Globe, ExternalLink, Search, Database, ZoomIn, ZoomOut
 } from 'lucide-react';
 import { BibleReferenceModal } from './BibleReferenceModal';
 import {
@@ -40,6 +41,8 @@ export interface InteractiveMagazineViewProps {
   loading?: boolean;
   onRegenerate?: () => void;
   onEditLesson?: () => void;
+  initialFullscreen?: boolean;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 export type SpecialBlockCategory =
@@ -222,9 +225,29 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
   verdadePratica = '',
   loading = false,
   onRegenerate,
-  onEditLesson
+  onEditLesson,
+  initialFullscreen = false,
+  onFullscreenChange
 }) => {
   const storageKeyCustom = `gipp_ebd_custom_content_${licaoNum}_${revista}`;
+  const magazineScrollRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(initialFullscreen);
+  const [readingZoom, setReadingZoom] = useState<number>(100);
+  const [readingFontSize, setReadingFontSize] = useState<number>(18);
+  const [readingContrast, setReadingContrast] = useState<'normal' | 'sepia' | 'high'>('normal');
+  const [showFullscreenSidebar, setShowFullscreenSidebar] = useState<boolean>(true);
+
+  useEffect(() => {
+    setIsFullscreen(initialFullscreen);
+  }, [initialFullscreen]);
+
+  const handleToggleFullscreen = useCallback((forceState?: boolean) => {
+    const next = typeof forceState === 'boolean' ? forceState : !isFullscreen;
+    setIsFullscreen(next);
+    if (onFullscreenChange) {
+      onFullscreenChange(next);
+    }
+  }, [isFullscreen, onFullscreenChange]);
   const [customContentInput, setCustomContentInput] = useState<string>(() => {
     try {
       return localStorage.getItem(storageKeyCustom) || '';
@@ -1306,18 +1329,19 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
   // Função de Folheio (Flipbook 3D) com direção natural e rolagem suave
   const handleTurnPage = useCallback((targetIndex: number, scrollTop = false) => {
     setReadingFormat('paginated');
-    setCurrentPageIndex(prev => {
-      const clamped = Math.max(0, Math.min(magazinePages.length - 1, targetIndex));
-      if (clamped !== prev) {
-        setFlipDirection(clamped > prev ? 'next' : 'prev');
-        setFlipAnimKey(k => k + 1);
-      }
-      return clamped;
-    });
+    const clamped = Math.max(0, Math.min(magazinePages.length - 1, targetIndex));
+    if (clamped !== currentPageIndex) {
+      setFlipDirection(clamped > currentPageIndex ? 'next' : 'prev');
+      setFlipAnimKey(k => k + 1);
+      setCurrentPageIndex(clamped);
+    }
     if (scrollTop) {
+      if (magazineScrollRef.current) {
+        magazineScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [magazinePages.length]);
+  }, [magazinePages.length, currentPageIndex]);
 
   // Garante que currentPageIndex seja válido quando o conteúdo muda
   useEffect(() => {
@@ -1326,21 +1350,26 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
     }
   }, [magazinePages.length, currentPageIndex]);
 
-  // Navegação por setas do teclado quando em modo paginado (com efeito Flipbook)
+  // Navegação por setas do teclado quando em modo paginado (com efeito Flipbook) e tecla ESC para sair da Tela Cheia
   useEffect(() => {
-    if (activeTab !== 'magazine' || readingFormat !== 'paginated') return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        e.stopPropagation();
+        handleToggleFullscreen(false);
+        return;
+      }
+      if (activeTab !== 'magazine' || readingFormat !== 'paginated') return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
       if (e.key === 'ArrowRight') {
-        handleTurnPage(currentPageIndex + 1);
+        handleTurnPage(currentPageIndex + 1, true);
       } else if (e.key === 'ArrowLeft') {
-        handleTurnPage(currentPageIndex - 1);
+        handleTurnPage(currentPageIndex - 1, true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab, readingFormat, currentPageIndex, handleTurnPage]);
+  }, [activeTab, readingFormat, currentPageIndex, handleTurnPage, isFullscreen, handleToggleFullscreen]);
 
   // Segmentos de Áudio da Lição EBD (sincronizados com as páginas da revista)
   const [showAudioPlayer, setShowAudioPlayer] = useState<boolean>(false);
@@ -1726,7 +1755,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
         <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent"></div>
 
         {/* Topo Editorial da Capa */}
-        <div className="relative z-10 px-6 pt-6 md:px-12 md:pt-8 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-4 text-xs text-slate-300">
+        <div className="relative z-10 px-6 pt-5 md:px-10 md:pt-6 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3.5 text-xs text-slate-300">
           <div className="flex items-center gap-2 font-bold">
             <Building2 size={14} className="text-emerald-400" />
             <span>{editora || 'CPAD'}</span>
@@ -1738,14 +1767,14 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
           </div>
         </div>
 
-        <div className="relative z-10 px-6 py-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
+        <div className="relative z-10 px-6 py-6 md:px-10 md:py-8 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
           {/* Arte da Capa */}
-          <div className="w-44 sm:w-52 shrink-0 aspect-[2/3] bg-white rounded-2xl rotate-1 hover:rotate-0 transition-transform duration-500 shadow-2xl overflow-hidden border-4 border-white/90 ring-1 ring-emerald-500/50">
+          <div className="w-36 sm:w-40 md:w-44 shrink-0 aspect-[2/3] bg-white rounded-2xl rotate-1 hover:rotate-0 transition-transform duration-500 shadow-2xl overflow-hidden border-4 border-white/90 ring-1 ring-emerald-500/50">
             <img src={finalCoverImage} alt={revista} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
 
           {/* Dados Principais da Lição e Tema */}
-          <div className="flex-1 text-center md:text-left space-y-4">
+          <div className="flex-1 min-w-0 text-center md:text-left space-y-3.5">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                 <span className="text-emerald-300 text-xs sm:text-sm font-black uppercase tracking-widest flex items-center gap-1.5">
@@ -1760,7 +1789,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               )}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black font-['Outfit'] leading-tight text-white tracking-tight drop-shadow-md">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black font-['Outfit'] leading-tight text-white tracking-tight drop-shadow-md">
               {parsedMagazine.title}
             </h1>
 
@@ -1785,11 +1814,11 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-2">
+            <div className="flex flex-wrap gap-2.5 justify-center md:justify-start pt-1">
               <button
                 type="button"
                 onClick={() => handlePlaySectionAudio('section-header')}
-                className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black flex items-center gap-2 border border-white/20 transition cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-black flex items-center gap-2 border border-white/20 transition cursor-pointer"
               >
                 <Volume2 size={15} className="text-emerald-300" />
                 <span>Ouvir Apresentação</span>
@@ -1798,8 +1827,8 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               {readingFormat === 'paginated' && totalPages > 1 && (
                 <button
                   type="button"
-                  onClick={() => handleTurnPage(1)}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 text-xs font-black flex items-center gap-2 shadow-lg transition cursor-pointer"
+                  onClick={() => handleTurnPage(1, true)}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 text-xs font-black flex items-center gap-2 shadow-lg transition cursor-pointer"
                 >
                   <span>Folhear Revista • Ir para Página 2</span>
                   <ChevronRight size={16} />
@@ -1810,7 +1839,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                 type="button"
                 onClick={handleAutoFetchAndCacheCoverOnline}
                 disabled={searchingCoverOnline}
-                className="gipp-btn gipp-btn-primary px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 text-xs font-black flex items-center gap-2 border border-amber-400/30 transition cursor-pointer"
+                className="gipp-btn gipp-btn-primary px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 text-xs font-black flex items-center gap-2 border border-amber-400/30 transition cursor-pointer"
                 title="Buscar Capa Online em https://escolabiblicadominical.org e salvar no cache IndexedDB do GIPP"
               >
                 <ImageIcon size={14} className={searchingCoverOnline ? 'animate-spin text-amber-300' : 'text-amber-300'} />
@@ -1820,6 +1849,16 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                     <Database size={10} /> Cache IDB
                   </span>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleToggleFullscreen()}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-2 border border-amber-400 shadow-md transition cursor-pointer"
+                title={isFullscreen ? 'Sair do modo de leitura em Tela Cheia (ESC)' : 'Abrir a revista em Tela Cheia (Padrão Bíblia) para melhor visualização e leitura'}
+              >
+                {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                <span>{isFullscreen ? 'Sair da Tela Cheia' : 'Ler em Tela Cheia'}</span>
               </button>
             </div>
           </div>
@@ -2600,8 +2639,827 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
 
   const activePageMeta = magazinePages[currentPageIndex] || magazinePages[0];
 
-  return (
-    <div className="flex flex-col h-full bg-slate-100/80 relative">
+  // Renderizador compartilhado do Popup de Versículo e Modal Completo
+  const renderSharedModalsAndPopups = () => (
+    <>
+      {inlineVersePopup && (
+        <div className="fixed bottom-5 right-5 z-[20050] w-[92vw] max-w-md bg-white border-2 border-amber-400 rounded-3xl shadow-2xl overflow-hidden animate-fadeIn text-slate-900">
+          <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-slate-900 px-5 py-3.5 text-white flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="p-2 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30 shrink-0">
+                <BookOpen size={16} />
+              </span>
+              <div className="min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block">
+                  Leitura do Versículo na Revista • ARC
+                </span>
+                <h5 className="font-black text-sm sm:text-base text-white truncate">
+                  {inlineVersePopup.canonicalRef}
+                </h5>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleToggleInlineVerseAudio}
+                className={`p-2 rounded-xl transition cursor-pointer ${
+                  inlineVerseAudioPlaying
+                    ? 'bg-amber-400 text-slate-950 font-black animate-pulse'
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+                title="Ouvir versículo"
+              >
+                {inlineVerseAudioPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyInlineVerse}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                title="Copiar versículo"
+              >
+                {inlineVerseCopied ? <Check size={15} className="text-emerald-300" /> : <Copy size={15} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                  setInlineVerseAudioPlaying(false);
+                  setInlineVersePopup(null);
+                }}
+                className="p-2 rounded-xl bg-white/10 hover:bg-rose-600 text-white transition cursor-pointer"
+                title="Fechar pequena janela"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5 max-h-72 overflow-y-auto space-y-3.5 bg-[#FFFDF9]">
+            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 font-serif text-xs sm:text-sm text-amber-950 whitespace-pre-wrap leading-relaxed">
+              {inlineVersePopup.versesText}
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 leading-relaxed">
+              <strong className="font-black text-[10px] uppercase tracking-wider text-emerald-800 block mb-0.5">
+                Síntese Exegética ({inlineVersePopup.cgadbChapter}):
+              </strong>
+              {inlineVersePopup.explanation}
+            </div>
+          </div>
+
+          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const refToOpen = inlineVersePopup.referenceQuery;
+                setInlineVersePopup(null);
+                setSelectedBibleRef(refToOpen);
+              }}
+              className="text-xs font-black text-indigo-700 hover:text-indigo-900 flex items-center gap-1.5 cursor-pointer"
+            >
+              <Maximize2 size={13} />
+              <span>Abrir Estudo Completo / Telão</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                setInlineVerseAudioPlaying(false);
+                setInlineVersePopup(null);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <BibleReferenceModal
+        isOpen={!!selectedBibleRef}
+        referenceQuery={selectedBibleRef || ''}
+        onClose={() => setSelectedBibleRef(null)}
+      />
+    </>
+  );
+
+  // MODO TELA CHEIA REFORMULADO NO EXATO PADRÃO DO FORMULÁRIO DA BÍBLIA DE ESTUDO (ModuleBiblia)
+  if (isFullscreen && typeof document !== 'undefined') {
+    const bibleStyleFullscreenView = (
+      <div
+        className={`fixed inset-0 z-[20000] flex flex-col overflow-hidden transition-colors duration-300 font-sans select-none ${
+          readingContrast === 'high'
+            ? 'bg-black text-white'
+            : readingContrast === 'sepia'
+            ? 'bg-[#f4eccf] text-[#433422]'
+            : 'bg-[#f4f1ea] text-slate-900'
+        }`}
+      >
+        {/* BARRA DE CONTROLE SUPERIOR IDÊNTICA AO MODO LEITURA EXPANDIDO DA BÍBLIA */}
+        <div className="bg-slate-900 text-white border-b-2 border-amber-600 px-4 md:px-6 py-3.5 flex flex-wrap justify-between items-center gap-3 shrink-0 shadow-lg z-30">
+          <div className="flex items-center gap-3 min-w-0">
+            <BookOpen className="text-amber-500 shrink-0" size={24} />
+            <div className="min-w-0">
+              <h2 className="font-serif text-sm sm:text-base md:text-lg font-black tracking-wide uppercase leading-none text-white truncate">
+                {parsedMagazine.title}
+              </h2>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">
+                {editora || 'CPAD'} • {revista || 'Revista EBD'} • Página {currentPageIndex + 1} de {magazinePages.length} • Modo Leitura Expandido
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+            {/* Alternar Menu Lateral (Estilo Bíblia de Estudo) */}
+            <button
+              type="button"
+              onClick={() => setShowFullscreenSidebar(prev => !prev)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer border ${
+                showFullscreenSidebar
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/10'
+              }`}
+              title="Mostrar ou ocultar a coluna lateral de navegação da Revista"
+            >
+              <ListOrdered size={14} />
+              <span className="hidden sm:inline">{showFullscreenSidebar ? 'Ocultar Índice' : 'Mostrar Índice'}</span>
+            </button>
+
+            {/* Botão de Áudio */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowAudioPlayer(prev => !prev);
+                if (!showAudioPlayer && !audioNarration.isPlaying) {
+                  audioNarration.play(0);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer border ${
+                audioNarration.isPlaying
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                  : 'bg-white/10 hover:bg-white/20 text-white border-white/10'
+              }`}
+            >
+              <Headphones size={14} className={audioNarration.isPlaying ? 'animate-bounce' : 'text-amber-400'} />
+              <span className="hidden sm:inline">{audioNarration.isPlaying ? 'Ouvindo...' : 'Ouvir Áudio'}</span>
+            </button>
+
+            {/* Controles de Tamanho da Fonte (A- | A | A+) idênticos à Bíblia */}
+            <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
+              <button
+                type="button"
+                onClick={() => setReadingFontSize(prev => Math.max(14, prev - 2))}
+                className="px-2.5 py-1 hover:bg-white/10 rounded-lg text-xs font-bold transition cursor-pointer text-white"
+                title="Diminuir Fonte"
+              >
+                A-
+              </button>
+              <span className="text-[10px] font-mono px-1.5 opacity-80">{readingFontSize}px</span>
+              <button
+                type="button"
+                onClick={() => setReadingFontSize(18)}
+                className="px-2 py-1 hover:bg-white/10 rounded-lg text-xs font-bold transition cursor-pointer text-amber-400"
+                title="Tamanho Padrão (18px)"
+              >
+                A
+              </button>
+              <button
+                type="button"
+                onClick={() => setReadingFontSize(prev => Math.min(32, prev + 2))}
+                className="px-2.5 py-1 hover:bg-white/10 rounded-lg text-sm font-black transition cursor-pointer text-white"
+                title="Aumentar Fonte"
+              >
+                A+
+              </button>
+            </div>
+
+            {/* Controles de Contraste / Tema (Padrão | Sépia | Contraste) idênticos à Bíblia */}
+            <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
+              <button
+                type="button"
+                onClick={() => setReadingContrast('normal')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer ${
+                  readingContrast === 'normal' ? 'bg-amber-500 text-slate-900' : 'text-slate-300 hover:bg-white/5'
+                }`}
+              >
+                Padrão
+              </button>
+              <button
+                type="button"
+                onClick={() => setReadingContrast('sepia')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer ${
+                  readingContrast === 'sepia' ? 'bg-amber-500 text-slate-900' : 'text-slate-300 hover:bg-white/5'
+                }`}
+              >
+                Sépia
+              </button>
+              <button
+                type="button"
+                onClick={() => setReadingContrast('high')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer ${
+                  readingContrast === 'high' ? 'bg-amber-500 text-slate-900' : 'text-slate-300 hover:bg-white/5'
+                }`}
+              >
+                Contraste
+              </button>
+            </div>
+
+            {/* Botão Vermelho de Sair idêntico ao Modo Leitura da Bíblia */}
+            <button
+              type="button"
+              onClick={() => handleToggleFullscreen(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-xs uppercase tracking-widest transition shadow-md cursor-pointer"
+              title="Sair da Tela Cheia (ESC)"
+            >
+              <X size={16} /> Sair
+            </button>
+          </div>
+        </div>
+
+        {/* BARRA DE ÁUDIO QUANDO ATIVA */}
+        {showAudioPlayer && (
+          <div className="bg-slate-900 border-b border-amber-500/30 text-white px-4 md:px-8 py-2.5 shrink-0 z-20 shadow-lg font-sans">
+            <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 font-black shrink-0">
+                  <Headphones size={18} />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-sans font-black text-amber-400 text-xs sm:text-sm block truncate">
+                    {audioNarration.currentSegment?.label || parsedMagazine.title}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    Bloco {audioNarration.currentIndex + 1} de {ebdAudioSegments.length}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={audioNarration.prev}
+                  disabled={audioNarration.currentIndex === 0}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 transition cursor-pointer"
+                >
+                  <SkipBack size={14} />
+                </button>
+                {audioNarration.isPlaying ? (
+                  <button
+                    type="button"
+                    onClick={audioNarration.pause}
+                    className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Pause size={14} className="fill-current" /> Pausar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => audioNarration.play()}
+                    className="px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Play size={14} className="fill-current" /> {audioNarration.isPaused ? 'Continuar' : 'Ouvir'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={audioNarration.stop}
+                  disabled={!audioNarration.isPlaying && !audioNarration.isPaused}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950/80 disabled:opacity-40 text-slate-300 transition cursor-pointer"
+                >
+                  <Square size={13} className="fill-current" />
+                </button>
+                <button
+                  type="button"
+                  onClick={audioNarration.next}
+                  disabled={audioNarration.currentIndex >= ebdAudioSegments.length - 1}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 transition cursor-pointer"
+                >
+                  <SkipForward size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    audioNarration.stop();
+                    setShowAudioPlayer(false);
+                  }}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* NOTIFICAÇÃO */}
+        {customNotification && (
+          <div className="bg-emerald-600 text-white px-6 py-2 text-xs font-bold text-center flex items-center justify-center gap-2 shadow-sm shrink-0">
+            <CheckCircle size={15} />
+            <span>{customNotification}</span>
+          </div>
+        )}
+
+        {/* CORPO PRINCIPAL EM 2 COLUNAS IDÊNTICO AO FORMULÁRIO DA BÍBLIA DE ESTUDO */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* COLUNA ESQUERDA: SUMÁRIO E FERRAMENTAS (ESTILO BÍBLIA SAGRADA) */}
+          {showFullscreenSidebar && (
+            <div className="w-full md:w-80 lg:w-88 bg-white border-r border-[#e5e0d8] flex flex-col shrink-0 z-10 h-1/3 md:h-full shadow-md text-slate-900">
+              {/* Cabeçalho Escuro com Borda Âmbar idêntico à Bíblia */}
+              <div className="p-4 bg-slate-900 text-[#f4f1ea] border-b-4 border-amber-600 flex flex-col items-center justify-center text-center relative overflow-hidden shrink-0">
+                <div className="absolute -right-4 -top-4 opacity-5 pointer-events-none">
+                  <BookOpen size={110} />
+                </div>
+                <div className="flex items-center gap-3 w-full text-left relative z-10">
+                  <img
+                    src={finalCoverImage}
+                    alt={revista}
+                    className="w-12 h-16 object-cover rounded-lg border-2 border-amber-500/80 shadow-md shrink-0 bg-white"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] font-bold tracking-[0.2em] text-amber-400 uppercase block">
+                      {editora || 'CPAD'} • {trimestre || 'Revista EBD'}
+                    </span>
+                    <h3 className="font-serif text-sm font-black tracking-wide uppercase text-white leading-snug line-clamp-2">
+                      {revista || 'Lições Bíblicas'}
+                    </h3>
+                    <span className="text-[10px] text-emerald-300 font-bold block mt-0.5 truncate">
+                      Lição {parsedMagazine.lessonNum} • {turma || 'Adultos'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Botões Rápidos de Capa e Modo no Cabeçalho Lateral */}
+                <div className="grid grid-cols-2 gap-1.5 w-full mt-3 pt-2.5 border-t border-white/10 relative z-10">
+                  <button
+                    type="button"
+                    onClick={handleAutoFetchAndCacheCoverOnline}
+                    disabled={searchingCoverOnline}
+                    className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-amber-300 text-[10px] font-black flex items-center justify-center gap-1 transition cursor-pointer border border-white/10"
+                  >
+                    <ImageIcon size={12} className={searchingCoverOnline ? 'animate-spin' : ''} />
+                    <span>{searchingCoverOnline ? 'Buscando...' : 'Buscar Capa'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReadingFormat(prev => (prev === 'paginated' ? 'continuous' : 'paginated'))}
+                    className="px-2.5 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 text-[10px] font-black flex items-center justify-center gap-1 transition cursor-pointer border border-amber-500/30"
+                  >
+                    <BookOpen size={12} />
+                    <span>{readingFormat === 'paginated' ? 'Modo Folheio' : 'Modo Contínuo'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Abas de Navegação estilo Bíblia (Páginas | Conteúdo | Fonte Online) */}
+              <div className="flex border-b border-[#e5e0d8] bg-[#faf8f5] p-2 gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('magazine')}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                    activeTab === 'magazine'
+                      ? 'bg-slate-900 text-amber-400 shadow-sm'
+                      : 'text-slate-500 hover:bg-slate-200/50'
+                  }`}
+                >
+                  📖 Páginas ({magazinePages.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('custom_input')}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                    activeTab === 'custom_input'
+                      ? 'bg-slate-900 text-amber-400 shadow-sm'
+                      : 'text-slate-500 hover:bg-slate-200/50'
+                  }`}
+                >
+                  ✏️ Conteúdo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('online_source');
+                    if (onlineArticles.length === 0) {
+                      handleSearchEscolaBiblicaOrg();
+                    }
+                  }}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                    activeTab === 'online_source'
+                      ? 'bg-slate-900 text-amber-400 shadow-sm'
+                      : 'text-slate-500 hover:bg-slate-200/50'
+                  }`}
+                >
+                  🌐 Acervo Web
+                </button>
+              </div>
+
+              {/* Lista de Páginas e Sumário da Lição (idêntico à lista de livros da Bíblia) */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar bg-[#faf8f5]/50">
+                <div className="px-2 py-1 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <span>Índice de Páginas da Lição</span>
+                  <span>{currentPageIndex + 1}/{magazinePages.length}</span>
+                </div>
+
+                {magazinePages.map((pg, idx) => {
+                  const isActive = activeTab === 'magazine' && readingFormat === 'paginated' && currentPageIndex === idx;
+                  return (
+                    <button
+                      key={pg.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('magazine');
+                        handleTurnPage(idx, true);
+                      }}
+                      className={`w-full text-left px-3.5 py-3 rounded-xl transition-all flex items-start justify-between gap-2 group cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-900 text-amber-400 font-bold shadow-md translate-x-1'
+                          : 'text-slate-700 hover:bg-[#e5e0d8]/60 font-medium bg-white border border-[#e5e0d8]/70'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-black ${
+                              isActive ? 'bg-amber-500 text-slate-950' : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            Pág. {pg.pageNumber}
+                          </span>
+                          <span className="font-serif text-xs sm:text-sm font-black truncate">
+                            {pg.shortLabel.replace(/^Pág\.\s*\d+\s*•\s*/i, '')}
+                          </span>
+                        </div>
+                        <p
+                          className={`text-[11px] mt-1 line-clamp-1 ${
+                            isActive ? 'text-slate-300' : 'text-slate-500'
+                          }`}
+                        >
+                          {pg.fullTitle}
+                        </p>
+                      </div>
+                      <ChevronRight
+                        size={15}
+                        className={`shrink-0 mt-1 transition-transform ${
+                          isActive ? 'text-amber-400 translate-x-0.5' : 'text-slate-300 group-hover:text-slate-500'
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+
+                {/* Card de Referência Bíblica Base na Barra Lateral */}
+                <div className="mt-4 p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/80 space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-800 block">
+                    Leitura Bíblica Base (ARC)
+                  </span>
+                  <p className="font-serif text-xs font-bold text-slate-800">
+                    {parsedMagazine.bibleRefHeader}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenInlineVerse(parsedMagazine.bibleRefHeader)}
+                    className="w-full py-1.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-black transition cursor-pointer"
+                  >
+                    Abrir Passagem Bíblica
+                  </button>
+                </div>
+              </div>
+
+              {/* Rodapé da Coluna Lateral com Ações Rápidas */}
+              {(onEditLesson || onRegenerate) && (
+                <div className="p-3 bg-[#faf8f5] border-t border-[#e5e0d8] flex items-center gap-2 shrink-0">
+                  {onEditLesson && (
+                    <button
+                      type="button"
+                      onClick={onEditLesson}
+                      className="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-black border border-slate-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Edit3 size={12} /> Editar Lição
+                    </button>
+                  )}
+                  {onRegenerate && (
+                    <button
+                      type="button"
+                      onClick={onRegenerate}
+                      className="flex-1 py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-black border border-indigo-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <RefreshCw size={12} /> Atualizar
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* COLUNA DIREITA: FOLHA DE ESTUDO E LEITURA EXPANDIDA (ESTILO BÍBLIA SAGRADA) */}
+          <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
+            <div ref={magazineScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 custom-scrollbar">
+              {activeTab === 'custom_input' ? (
+                <div className="max-w-4xl mx-auto space-y-6 text-slate-900">
+                  <div className="bg-white rounded-2xl border border-[#e5e0d8] shadow-md p-6 sm:p-8 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                      <h3 className="font-serif font-black text-base text-slate-900 flex items-center gap-2">
+                        <FileEdit size={18} className="text-amber-600" />
+                        <span>Inserir ou Editar Conteúdo Completo da Lição</span>
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCustomContentInput(lessonText || completeLessonMarkdown)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                        >
+                          Carregar Texto Atual
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('magazine')}
+                          className="px-3 py-1.5 rounded-lg bg-slate-900 text-amber-400 text-xs font-black cursor-pointer"
+                        >
+                          Voltar à Leitura
+                        </button>
+                      </div>
+                    </div>
+                    <textarea
+                      value={customContentInput}
+                      onChange={(e) => setCustomContentInput(e.target.value)}
+                      rows={16}
+                      placeholder="Cole aqui o conteúdo completo da lição..."
+                      className="w-full rounded-xl border border-slate-300 p-4 font-mono text-xs sm:text-sm text-slate-800 leading-relaxed outline-hidden bg-slate-50"
+                    />
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={handleApplyCustomContent}
+                        className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black flex items-center gap-2 shadow-md cursor-pointer"
+                      >
+                        <Wand2 size={15} />
+                        <span>Aplicar e Paginar Revista</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : activeTab === 'online_source' ? (
+                <div className="max-w-5xl mx-auto space-y-6 text-slate-900">
+                  <div className="bg-slate-900 text-white rounded-2xl p-6 border-b-4 border-amber-600 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">
+                          Acervo Integrado GIPP
+                        </span>
+                        <h3 className="font-serif text-xl font-black">https://escolabiblicadominical.org</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setOnlinePortalSubMode('search')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-black cursor-pointer ${
+                            onlinePortalSubMode === 'search' ? 'bg-amber-500 text-slate-950' : 'bg-white/10 text-white'
+                          }`}
+                        >
+                          Buscar Artigos e Capas
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOnlinePortalSubMode('site')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-black cursor-pointer ${
+                            onlinePortalSubMode === 'site' ? 'bg-amber-500 text-slate-950' : 'bg-white/10 text-white'
+                          }`}
+                        >
+                          Navegar no Site
+                        </button>
+                      </div>
+                    </div>
+
+                    {onlinePortalSubMode === 'search' && (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          value={onlineSearchQuery}
+                          onChange={(e) => setOnlineSearchQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSearchEscolaBiblicaOrg()}
+                          placeholder="Pesquisar lição, revista ou tema..."
+                          className="flex-1 px-4 py-2.5 rounded-xl bg-white text-slate-900 text-xs font-bold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSearchEscolaBiblicaOrg()}
+                          disabled={onlineSearching}
+                          className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer"
+                        >
+                          {onlineSearching ? 'Buscando...' : 'Buscar no Acervo'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {onlinePortalSubMode === 'site' ? (
+                    <div className="bg-white rounded-2xl border border-[#e5e0d8] shadow-md overflow-hidden h-[680px] flex flex-col">
+                      <iframe
+                        src="https://escolabiblicadominical.org"
+                        title="Portal Escola Bíblica Dominical"
+                        className="w-full flex-1 border-0 bg-white"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                      />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {onlineArticles.map((art, idx) => (
+                        <div
+                          key={art.id || idx}
+                          className="bg-white rounded-2xl border border-[#e5e0d8] p-5 shadow-xs flex flex-col justify-between gap-4"
+                        >
+                          <div className="flex gap-4 items-start">
+                            <img
+                              src={art.capa || finalCoverImage}
+                              alt={art.titulo}
+                              className="w-16 h-24 object-cover rounded-xl border border-slate-200 shrink-0"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <h4 className="font-black text-sm text-slate-900">{art.titulo}</h4>
+                              <p className="text-xs text-slate-600 line-clamp-3">{art.resumo}</p>
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button
+                              type="button"
+                              onClick={() => handleImportFromEscolaBiblicaArticle(art)}
+                              className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black cursor-pointer"
+                            >
+                              Usar na Revista
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* FOLHA DE PAPEL DE ESTUDO BÍBLICO (IDÊNTICA AO FORMULÁRIO DA BÍBLIA) */
+                <div
+                  className={`max-w-5xl xl:max-w-6xl w-full mx-auto shadow-[0_10px_40px_rgba(0,0,0,0.08)] rounded-sm border p-5 sm:p-8 md:p-12 relative transition-colors duration-300 ${
+                    readingContrast === 'high'
+                      ? 'bg-zinc-950 border-zinc-800 text-white'
+                      : readingContrast === 'sepia'
+                      ? 'bg-[#f8f1d7] border-[#d6c7a1] text-[#433422]'
+                      : 'bg-[#faf8f5] border-[#e5e0d8] text-slate-900'
+                  }`}
+                >
+                  {/* Cabeçalho Clássico da Folha da Bíblia */}
+                  <div className="border-b-2 border-slate-900/80 pb-5 mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                    <div>
+                      <span className="text-[10px] font-bold tracking-[0.3em] text-amber-700 uppercase block mb-1">
+                        {editora || 'CPAD'} • {revista || 'Revista EBD'} • Lição {parsedMagazine.lessonNum}
+                      </span>
+                      <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-black tracking-tight leading-none">
+                        {readingFormat === 'paginated' ? activePageMeta.fullTitle : parsedMagazine.title}
+                      </h2>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border bg-amber-50 border-amber-300 text-amber-800 flex items-center gap-1.5">
+                        ★ {parsedMagazine.dogmaticCap}
+                      </span>
+                      <span className="text-xs font-serif italic text-slate-600 bg-[#f4f1ea] px-3 py-1.5 rounded-sm border border-[#e5e0d8]">
+                        {parsedMagazine.bibleRefHeader} (ARC)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Barra Rápida de Seleção de Páginas (Idêntica à Barra "Ir para o Capítulo" da Bíblia) */}
+                  <div className="mb-8 bg-[#f4f1ea]/90 p-3 rounded-xl border border-[#e5e0d8]">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Ir para a Página da Revista:
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setReadingFormat('paginated')}
+                          className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase transition cursor-pointer ${
+                            readingFormat === 'paginated'
+                              ? 'bg-slate-900 text-amber-400'
+                              : 'text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          Folhear Páginas
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReadingFormat('continuous')}
+                          className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase transition cursor-pointer ${
+                            readingFormat === 'continuous'
+                              ? 'bg-slate-900 text-amber-400'
+                              : 'text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          Visão Contínua
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {magazinePages.map((pg, idx) => {
+                        const active = readingFormat === 'paginated' && currentPageIndex === idx;
+                        return (
+                          <button
+                            key={pg.id}
+                            type="button"
+                            onClick={() => handleTurnPage(idx, true)}
+                            className={`px-3 py-1.5 rounded-lg font-serif text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                              active
+                                ? 'bg-amber-600 text-white shadow-md scale-105'
+                                : 'bg-white text-slate-700 hover:bg-amber-50 hover:text-amber-700 border border-[#e5e0d8]'
+                            }`}
+                          >
+                            <span className="font-mono text-[10px] opacity-80">{pg.pageNumber}.</span>
+                            <span>{pg.shortLabel.replace(/^Pág\.\s*\d+\s*•\s*/i, '')}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* CONTEÚDO DA PÁGINA COM ESCALA TIPOGRAFICA (A- / A / A+) */}
+                  <div
+                    style={{ zoom: `${Math.round((readingFontSize / 18) * 100)}%` }}
+                    className="transition-all duration-200 text-slate-900"
+                  >
+                    {readingFormat === 'paginated' ? (
+                      <div
+                        key={`fullscreen-bible-sheet-${activePageMeta.id}-${flipAnimKey}`}
+                        className={flipDirection === 'next' ? 'gipp-flip-anim-next' : 'gipp-flip-anim-prev'}
+                      >
+                        {renderPageByMetadata(activePageMeta)}
+                      </div>
+                    ) : (
+                      <div className="space-y-12">
+                        {magazinePages.map(pg => (
+                          <div key={pg.id} className="space-y-8 pb-8 border-b-2 border-dashed border-slate-300 last:border-b-0">
+                            {renderPageByMetadata(pg)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* BARRA INFERIOR ESCURA DE PAGINAÇÃO IDÊNTICA AO MODO LEITURA DA BÍBLIA */}
+            <div className="bg-slate-900 text-white border-t border-white/10 px-4 sm:px-8 py-3.5 flex justify-between items-center shrink-0 z-20">
+              <button
+                type="button"
+                onClick={() => handleTurnPage(currentPageIndex - 1, true)}
+                disabled={readingFormat === 'paginated' && currentPageIndex === 0}
+                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-widest transition disabled:opacity-30 cursor-pointer"
+              >
+                <ChevronLeft size={18} />
+                <span>Anterior</span>
+              </button>
+
+              <div className="flex flex-col items-center">
+                <span className="font-serif text-xs sm:text-sm font-black text-amber-400">
+                  Página {currentPageIndex + 1} de {magazinePages.length} — {activePageMeta.shortLabel.replace(/^Pág\.\s*\d+\s*•\s*/i, '')}
+                </span>
+                <div className="flex gap-1.5 mt-1">
+                  {magazinePages.map((pg, idx) => (
+                    <button
+                      key={pg.id}
+                      type="button"
+                      onClick={() => handleTurnPage(idx, true)}
+                      className={`w-2 h-2 rounded-full transition-all cursor-pointer ${
+                        currentPageIndex === idx ? 'bg-amber-500 scale-125' : 'bg-white/25 hover:bg-white/50'
+                      }`}
+                      title={pg.fullTitle}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleTurnPage(currentPageIndex + 1, true)}
+                disabled={readingFormat === 'paginated' && currentPageIndex >= magazinePages.length - 1}
+                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-widest transition disabled:opacity-30 shadow-md cursor-pointer"
+              >
+                <span>Próxima</span>
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {renderSharedModalsAndPopups()}
+      </div>
+    );
+
+    return createPortal(bibleStyleFullscreenView, document.body);
+  }
+
+  const magazineFullContent = (
+    <div className="flex flex-col bg-slate-100/95 relative h-full">
       {/* Barra Editorial Superior (.gipp-module-header) */}
       <div className="gipp-module-header !mb-0 flex flex-wrap items-center justify-between gap-3 !px-6 !py-3.5 bg-white border-b border-slate-200 shrink-0">
         <div className="flex items-center gap-2.5">
@@ -2622,6 +3480,17 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Botão Principal de Abrir em Tela Cheia (Estilo Bíblia) */}
+          <button
+            type="button"
+            onClick={() => handleToggleFullscreen(true)}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer border shadow-xs bg-slate-900 hover:bg-indigo-950 text-amber-400 border-amber-500/40"
+            title="Abrir a Revista em Tela Cheia no padrão do Formulário da Bíblia de Estudo"
+          >
+            <Maximize2 size={14} />
+            <span>Modo Leitura (Tela Cheia)</span>
+          </button>
+
           {onEditLesson && (
             <button
               type="button"
@@ -2802,7 +3671,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
         </div>
       )}
 
-      {/* BARRA DE NAVEGAÇÃO E MUDANÇA DE PÁGINAS DA REVISTA (FLIPBOOK) */}
+      {/* BARRA DE NAVEGAÇÃO E MUDANÇA DE PÁGINAS DA REVISTA (FLIPBOOK + TELA CHEIA + ZOOM) */}
       {activeTab === 'magazine' && (
         <div className="bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-2.5 shrink-0 z-20 shadow-2xs">
           <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2">
@@ -2810,7 +3679,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => handleTurnPage(currentPageIndex - 1)}
+                onClick={() => handleTurnPage(currentPageIndex - 1, true)}
                 disabled={readingFormat === 'paginated' && currentPageIndex === 0}
                 className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-800 text-xs font-black flex items-center gap-1 transition cursor-pointer border border-slate-200"
               >
@@ -2826,7 +3695,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
 
               <button
                 type="button"
-                onClick={() => handleTurnPage(currentPageIndex + 1)}
+                onClick={() => handleTurnPage(currentPageIndex + 1, true)}
                 disabled={readingFormat === 'paginated' && currentPageIndex >= magazinePages.length - 1}
                 className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-black flex items-center gap-1 transition cursor-pointer shadow-2xs"
               >
@@ -2841,7 +3710,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
                 <button
                   key={pg.id}
                   type="button"
-                  onClick={() => handleTurnPage(idx)}
+                  onClick={() => handleTurnPage(idx, true)}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
                     readingFormat === 'paginated' && currentPageIndex === idx
                       ? 'bg-emerald-600 text-white font-black shadow-2xs'
@@ -2853,127 +3722,72 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               ))}
             </div>
 
-            {/* Alternador Folhear Páginas vs Visão Contínua */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setReadingFormat('paginated')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                  readingFormat === 'paginated'
-                    ? 'bg-white text-slate-900 shadow-2xs font-black'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Folhear Páginas
-              </button>
-              <button
-                type="button"
-                onClick={() => setReadingFormat('continuous')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                  readingFormat === 'continuous'
-                    ? 'bg-white text-slate-900 shadow-2xs font-black'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Visão Contínua
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PEQUENA JANELA FLUTUANTE DE VERSÍCULO DENTRO DA PRÓPRIA REVISTA */}
-      {inlineVersePopup && (
-        <div className="fixed bottom-5 right-5 z-40 w-[92vw] max-w-md bg-white border-2 border-amber-400 rounded-3xl shadow-2xl overflow-hidden animate-fadeIn">
-          <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-slate-900 px-5 py-3.5 text-white flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="p-2 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30 shrink-0">
-                <BookOpen size={16} />
-              </span>
-              <div className="min-w-0">
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block">
-                  Leitura do Versículo na Revista • ARC
-                </span>
-                <h5 className="font-black text-sm sm:text-base text-white truncate">
-                  {inlineVersePopup.canonicalRef}
-                </h5>
+            {/* Controles de Leitura: Alternador Folhear vs Contínua, Zoom de Leitura e Botão Tela Cheia */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setReadingFormat('paginated')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                    readingFormat === 'paginated'
+                      ? 'bg-white text-slate-900 shadow-2xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Folhear Páginas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReadingFormat('continuous')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                    readingFormat === 'continuous'
+                      ? 'bg-white text-slate-900 shadow-2xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Visão Contínua
+                </button>
               </div>
-            </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Controle de Zoom para conforto de leitura */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200" title="Ajustar tamanho da página para leitura">
+                <button
+                  type="button"
+                  onClick={() => setReadingZoom(z => Math.max(85, z - 10))}
+                  className="p-1 rounded-lg hover:bg-white text-slate-700 transition cursor-pointer"
+                  title="Diminuir zoom"
+                >
+                  <ZoomOut size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReadingZoom(100)}
+                  className="px-1.5 text-[10px] font-mono font-black text-slate-700 hover:text-emerald-700 cursor-pointer"
+                  title="Restaurar zoom (100%)"
+                >
+                  {readingZoom}%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReadingZoom(z => Math.min(135, z + 10))}
+                  className="p-1 rounded-lg hover:bg-white text-slate-700 transition cursor-pointer"
+                  title="Aumentar zoom para leitura"
+                >
+                  <ZoomIn size={13} />
+                </button>
+              </div>
+
+              {/* Botão rápido de Tela Cheia na barra de paginação */}
               <button
                 type="button"
-                onClick={handleToggleInlineVerseAudio}
-                className={`p-2 rounded-xl transition cursor-pointer ${
-                  inlineVerseAudioPlaying
-                    ? 'bg-amber-400 text-slate-950 font-black animate-pulse'
-                    : 'bg-white/10 hover:bg-white/20 text-white'
-                }`}
-                title="Ouvir versículo"
+                onClick={() => handleToggleFullscreen(true)}
+                className="px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition cursor-pointer border bg-slate-900 hover:bg-slate-800 text-amber-400 border-slate-800"
+                title="Expandir Revista em Tela Cheia (Padrão Bíblia)"
               >
-                {inlineVerseAudioPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />}
-              </button>
-              <button
-                type="button"
-                onClick={handleCopyInlineVerse}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
-                title="Copiar versículo"
-              >
-                {inlineVerseCopied ? <Check size={15} className="text-emerald-300" /> : <Copy size={15} />}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-                  setInlineVerseAudioPlaying(false);
-                  setInlineVersePopup(null);
-                }}
-                className="p-2 rounded-xl bg-white/10 hover:bg-rose-600 text-white transition cursor-pointer"
-                title="Fechar pequena janela"
-              >
-                <X size={15} />
+                <Maximize2 size={13} />
+                <span>Tela Cheia</span>
               </button>
             </div>
-          </div>
-
-          <div className="p-5 max-h-72 overflow-y-auto space-y-3.5 bg-[#FFFDF9]">
-            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 font-serif text-xs sm:text-sm text-amber-950 whitespace-pre-wrap leading-relaxed">
-              {inlineVersePopup.versesText}
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 leading-relaxed">
-              <strong className="font-black text-[10px] uppercase tracking-wider text-emerald-800 block mb-0.5">
-                Síntese Exegética ({inlineVersePopup.cgadbChapter}):
-              </strong>
-              {inlineVersePopup.explanation}
-            </div>
-          </div>
-
-          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const refToOpen = inlineVersePopup.referenceQuery;
-                setInlineVersePopup(null);
-                setSelectedBibleRef(refToOpen);
-              }}
-              className="text-xs font-black text-indigo-700 hover:text-indigo-900 flex items-center gap-1.5 cursor-pointer"
-            >
-              <Maximize2 size={13} />
-              <span>Abrir Estudo Completo / Telão</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-                setInlineVerseAudioPlaying(false);
-                setInlineVersePopup(null);
-              }}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
-            >
-              Fechar
-            </button>
           </div>
         </div>
       )}
@@ -2986,8 +3800,8 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
         </div>
       )}
 
-      {/* Área Principal de Conteúdo */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Área Principal de Conteúdo (Modo Normal) */}
+      <div ref={magazineScrollRef} className="flex-1 overflow-y-auto relative">
         {activeTab === 'custom_input' ? (
           <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 md:py-10 space-y-6">
             <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-[2rem] p-6 sm:p-8 md:p-10 shadow-xl border border-indigo-700/50 space-y-4">
@@ -3063,35 +3877,7 @@ export const InteractiveMagazineView: React.FC<InteractiveMagazineViewProps> = (
               <textarea
                 value={customContentInput}
                 onChange={(e) => setCustomContentInput(e.target.value)}
-                placeholder="Cole aqui 100% do conteúdo da sua lição!
-
-Exemplo de estrutura que o sistema reconhece automaticamente:
-Lição 05: O Deus Criador e Sustentador
-Tema: A Soberania de Deus na Criação
-Texto Áureo: No princípio criou Deus os céus e a terra. (Gn 1.1)
-Verdade Prática: Deus é o Soberano Criador de todas as coisas.
-Leitura Bíblica em Classe: Gênesis 1.1-5, 26, 27
-
-Introdução
-A doutrina da criação é o fundamento de toda a teologia bíblica (Hb 11.3)...
-
-I - A OBRA CRIADORA DE DEUS
-1. Criação a partir do nada. Deus chamou à existência o que não existia (Rm 4.17)...
-2. O poder da Palavra. Pela Palavra do Senhor foram feitos os céus (Sl 33.6,9)...
-
-Subsídio Teológico
-A expressão hebraica 'bara' indica uma ação exclusiva de Deus...
-
-Auxílio ao Professor
-Inicie a aula perguntando aos alunos como a criação revela a glória divina (Sl 19.1)...
-
-Sinopse I: Deus criou o universo pelo poder da Sua Palavra.
-
-Conclusão
-Louvemos ao Criador e Salvador Jesus Cristo (Cl 1.16,17).
-
-Questionário
-1. Qual o significado do verbo criar no texto bíblico?"
+                placeholder="Cole aqui 100% do conteúdo da sua lição!"
                 rows={16}
                 className="w-full rounded-2xl border border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 p-5 font-mono text-xs sm:text-sm text-slate-800 leading-relaxed outline-hidden transition bg-slate-50/50 resize-y"
               />
@@ -3362,7 +4148,10 @@ Questionário
             )}
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 md:py-8 space-y-8">
+          <div
+            className="max-w-5xl mx-auto px-4 py-6 sm:px-6 md:py-8 space-y-8 transition-all duration-300"
+            style={readingZoom !== 100 ? { zoom: `${readingZoom}%` } : undefined}
+          >
             {/* Banner de status quando conteúdo próprio está ativo */}
             {appliedCustomContent.trim() && (
               <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border border-emerald-500/40 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-md text-white">
@@ -3419,7 +4208,15 @@ Questionário
                         <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
                         <span>Folheio Didático Flipbook • {activePageMeta.shortLabel}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleFullscreen(true)}
+                          className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-700 hover:text-indigo-900 cursor-pointer"
+                        >
+                          <Maximize2 size={12} />
+                          <span>Modo Leitura (Tela Cheia)</span>
+                        </button>
                         <div className="w-28 sm:w-36 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
@@ -3510,12 +4307,9 @@ Questionário
         )}
       </div>
 
-      {/* Modal Completo de Estudo Bíblico e Projeção no Telão */}
-      <BibleReferenceModal
-        isOpen={!!selectedBibleRef}
-        referenceQuery={selectedBibleRef || ''}
-        onClose={() => setSelectedBibleRef(null)}
-      />
+      {renderSharedModalsAndPopups()}
     </div>
   );
+
+  return magazineFullContent;
 };

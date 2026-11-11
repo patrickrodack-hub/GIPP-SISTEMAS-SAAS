@@ -106,7 +106,7 @@ export const BibleReferenceModal: React.FC<BibleReferenceModalProps> = ({
     if (!isOpen || !currentRef) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+        <div className="fixed inset-0 z-[13100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
             <div 
                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scaleUp relative"
                 onClick={(e) => e.stopPropagation()}
